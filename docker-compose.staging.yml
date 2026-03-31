@@ -1,0 +1,12 @@
+services:
+  api:
+    env_file: []
+    environment:
+      ENVIRONMENT: staging
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/airtasker}
+      SECRET_KEY: ${SECRET_KEY:-staging-change-me}
+      USE_MOCK_CHATBOT: "false"
+      KYC_REQUIRED_FOR_PAYOUT: ${KYC_REQUIRED_FOR_PAYOUT:-true}
+      REDIS_URL: ${REDIS_URL:-}
+    restart: unless-stopped

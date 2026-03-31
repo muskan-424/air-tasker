@@ -1,0 +1,38 @@
+services:
+  db:
+    # Do not publish Postgres port publicly in production by default.
+    ports: []
+    mem_limit: "512m"
+    cpus: "0.50"
+    restart: unless-stopped
+
+  api:
+    # Avoid local dev defaults from env_file in production overlay.
+    env_file: []
+    environment:
+      ENVIRONMENT: production
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL for production}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY for production}
+      USE_MOCK_CHATBOT: "false"
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_PAYOUT_ACCOUNT_NUMBER: ${RAZORPAY_PAYOUT_ACCOUNT_NUMBER:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      KYC_PROVIDER: ${KYC_PROVIDER:-stub}
+      KYC_WEBHOOK_SECRET: ${KYC_WEBHOOK_SECRET:-}
+      KYC_REQUIRED_FOR_PAYOUT: ${KYC_REQUIRED_FOR_PAYOUT:-true}
+      REDIS_URL: ${REDIS_URL:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:4000/api/health', timeout=3).getcode()==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: "1g"
+    cpus: "1.00"
+    restart: unless-stopped
