@@ -26,6 +26,8 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), default=UserRole.POSTER, nullable=False)
+    razorpay_contact_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    razorpay_fund_account_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
@@ -41,4 +43,5 @@ class User(Base):
         "NotificationPreference", back_populates="user", cascade="all, delete-orphan", uselist=False
     )
     trusted_devices = relationship("UserTrustedDevice", back_populates="user", cascade="all, delete-orphan")
+    kyc_profile = relationship("UserKycProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 

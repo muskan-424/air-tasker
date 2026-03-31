@@ -128,12 +128,19 @@ class EscrowStatus(str, enum.Enum):
 
 class EscrowEventType(str, enum.Enum):
     HELD = "HELD"
+    PAYMENT_CAPTURED = "PAYMENT_CAPTURED"
     VERIFICATION_PASSED = "VERIFICATION_PASSED"
     VERIFICATION_FAILED = "VERIFICATION_FAILED"
     RELEASE_ELIGIBLE = "RELEASE_ELIGIBLE"
     RELEASED = "RELEASED"
     DISPUTE_OPENED = "DISPUTE_OPENED"
     CANCELLED = "CANCELLED"
+    REFUND_ISSUED = "REFUND_ISSUED"
+    PAYOUT_INITIATED = "PAYOUT_INITIATED"
+    PAYOUT_UPDATED = "PAYOUT_UPDATED"
+    PAYOUT_PROCESSED = "PAYOUT_PROCESSED"
+    PAYOUT_FAILED = "PAYOUT_FAILED"
+    PAYOUT_REVERSED = "PAYOUT_REVERSED"
 
 
 class EscrowPayment(Base):
@@ -144,6 +151,10 @@ class EscrowPayment(Base):
         UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, unique=True
     )
     razorpay_order_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    razorpay_payment_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    razorpay_refund_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    razorpay_payout_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    razorpay_payout_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     status: Mapped[EscrowStatus] = mapped_column(
         Enum(EscrowStatus, name="escrow_status"), default=EscrowStatus.HELD, nullable=False
     )

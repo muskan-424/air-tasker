@@ -106,3 +106,14 @@ class UserTrustedDevice(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="trusted_devices")
+
+
+class RazorpayWebhookEvent(Base):
+    """Stores Razorpay webhook `id` values to reject exact replays (same event redelivered)."""
+
+    __tablename__ = "razorpay_webhook_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    razorpay_event_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

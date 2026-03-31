@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +35,8 @@ from app.services.task_lifecycle_notifications import (
     on_task_accepted,
     on_verification_recorded,
 )
+from app.services.escrow_razorpay_refund import try_refund_escrow_capture
+from app.services.tasker_escrow_payout import try_escrow_payout_to_tasker
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
 from app.schemas.task import (
     AcceptTaskRequest,
@@ -512,6 +515,8 @@ async def release_escrow(
         )
     )
     await db.commit()
+    await db.refresh(escrow)
+    payout_status = await try_escrow_payout_to_tasker(db, task, escrow)
 
     await write_audit(
         db,
@@ -521,11 +526,16 @@ async def release_escrow(
         resource_id=escrow.id,
         ip_address=get_client_ip(request),
         user_agent=get_user_agent(request),
-        meta={"task_id": str(task.id)},
+        meta={"task_id": str(task.id), "payout_status": payout_status},
     )
     await on_escrow_released(db, poster_id=task.poster_id, task_id=task.id)
 
-    return EscrowReleaseResponse(escrow_payment_id=str(escrow.id), task_id=str(task.id), status=escrow.status.value)
+    return EscrowReleaseResponse(
+        escrow_payment_id=str(escrow.id),
+        task_id=str(task.id),
+        status=escrow.status.value,
+        payout_status=payout_status,
+    )
 
 
 @router.post("/disputes/{dispute_id}/resolve", response_model=DisputeResolveResponse)
@@ -589,7 +599,21 @@ async def resolve_dispute(
             )
         escrow_status_value = escrow.status.value
 
+    if escrow and payload.outcome != "release":
+        try:
+            await try_refund_escrow_capture(db, escrow, dispute_id=dispute.id)
+        except httpx.HTTPStatusError as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Razorpay refund failed: {e.response.text[:300]}",
+            ) from e
+
     await db.commit()
+
+    if escrow and payload.outcome == "release":
+        await db.refresh(escrow)
+        await try_escrow_payout_to_tasker(db, task_for_dispute, escrow)
 
     await write_audit(
         db,

@@ -6,9 +6,18 @@ import asyncio
 import logging
 from typing import Any
 
+from app.db.session import SessionLocal
+from app.services.notification_service import retry_failed_notifications
+
 logger = logging.getLogger(__name__)
 
 queue: asyncio.Queue[tuple[str, dict[str, Any]]] = asyncio.Queue()
+
+
+def reset_queue() -> None:
+    """New queue for the current process / event loop (needed for TestClient restarts)."""
+    global queue
+    queue = asyncio.Queue()
 
 
 async def enqueue(kind: str, payload: dict[str, Any]) -> None:
@@ -24,7 +33,13 @@ async def worker_loop(stop: asyncio.Event) -> None:
         except asyncio.CancelledError:
             break
         try:
-            logger.info("job processed kind=%s payload=%s", kind, payload)
+            if kind == "notifications.retry_failed":
+                limit = int(payload.get("limit", 0) or 0)
+                async with SessionLocal() as db:
+                    processed = await retry_failed_notifications(db, limit=limit or None)
+                logger.info("job processed kind=%s retried=%s", kind, processed)
+            else:
+                logger.info("job processed kind=%s payload=%s", kind, payload)
         except Exception:
             logger.exception("job failed kind=%s", kind)
 

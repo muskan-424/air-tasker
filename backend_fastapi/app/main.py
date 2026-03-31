@@ -12,26 +12,37 @@ from app.api.routes.admin_rag import router as admin_rag_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
+from app.api.routes.kyc import router as kyc_router
+from app.api.routes.kyc_webhooks import router as kyc_webhooks_router
 from app.api.routes.metrics import router as metrics_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.payments import router as payments_router
 from app.api.routes.task_drafts import router as task_drafts_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.verification import router as verification_router
+from app.api.routes.webhooks import router as webhooks_router
 from app.api.routes.voice import router as voice_router
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.middleware.metrics_middleware import MetricsMiddleware
-from app.workers.job_queue import start_worker
+from app.db.session import SessionLocal
+from app.services.notification_broadcast import notification_redis_listener
+from app.services.razorpay_webhook_cleanup import purge_old_razorpay_webhook_events
+from app.workers.job_queue import enqueue, reset_queue, start_worker
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    reset_queue()
     stop_worker = asyncio.Event()
     worker_task = start_worker(stop_worker)
 
     reindex_task: asyncio.Task | None = None
+    notification_retry_task: asyncio.Task | None = None
+    redis_notifications_task: asyncio.Task | None = None
+    razorpay_webhook_cleanup_task: asyncio.Task | None = None
     if settings.rag_reindex_interval_hours > 0 and settings.use_pinecone_rag:
         from pathlib import Path
 
@@ -50,6 +61,32 @@ async def lifespan(app: FastAPI):
 
         reindex_task = asyncio.create_task(reindex_loop())
 
+    if settings.notification_retry_interval_seconds > 0:
+        async def notification_retry_loop() -> None:
+            while True:
+                await asyncio.sleep(settings.notification_retry_interval_seconds)
+                await enqueue("notifications.retry_failed", {"limit": settings.notification_retry_batch_size})
+
+        notification_retry_task = asyncio.create_task(notification_retry_loop())
+
+    if settings.redis_url:
+        redis_notifications_task = asyncio.create_task(notification_redis_listener())
+
+    if settings.razorpay_webhook_events_retention_days > 0 and settings.razorpay_webhook_events_cleanup_interval_hours > 0:
+
+        async def razorpay_webhook_cleanup_loop() -> None:
+            while True:
+                await asyncio.sleep(settings.razorpay_webhook_events_cleanup_interval_hours * 3600)
+                try:
+                    async with SessionLocal() as db:
+                        await purge_old_razorpay_webhook_events(
+                            db, retention_days=settings.razorpay_webhook_events_retention_days
+                        )
+                except Exception:
+                    logger.exception("Razorpay webhook event cleanup failed")
+
+        razorpay_webhook_cleanup_task = asyncio.create_task(razorpay_webhook_cleanup_loop())
+
     yield
 
     stop_worker.set()
@@ -63,6 +100,24 @@ async def lifespan(app: FastAPI):
         reindex_task.cancel()
         try:
             await reindex_task
+        except asyncio.CancelledError:
+            pass
+    if notification_retry_task:
+        notification_retry_task.cancel()
+        try:
+            await notification_retry_task
+        except asyncio.CancelledError:
+            pass
+    if redis_notifications_task:
+        redis_notifications_task.cancel()
+        try:
+            await redis_notifications_task
+        except asyncio.CancelledError:
+            pass
+    if razorpay_webhook_cleanup_task:
+        razorpay_webhook_cleanup_task.cancel()
+        try:
+            await razorpay_webhook_cleanup_task
         except asyncio.CancelledError:
             pass
 
@@ -83,7 +138,11 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(verification_router)
+app.include_router(kyc_router)
+app.include_router(kyc_webhooks_router)
 app.include_router(notifications_router)
+app.include_router(payments_router)
+app.include_router(webhooks_router)
 app.include_router(metrics_router)
 app.include_router(admin_jobs_router)
 app.include_router(admin_rag_router)

@@ -74,6 +74,7 @@ class EscrowReleaseResponse(BaseModel):
     escrow_payment_id: str
     task_id: str
     status: str
+    payout_status: str | None = None
 
 
 class DisputeResolveRequest(BaseModel):

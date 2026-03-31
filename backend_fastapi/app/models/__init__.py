@@ -20,8 +20,10 @@ from app.models.platform_security import (
     NotificationPreference,
     OtpChallenge,
     OtpPurpose,
+    RazorpayWebhookEvent,
     UserTrustedDevice,
 )
+from app.models.kyc import KycStatus, UserKycProfile
 from app.models.user import User, UserRole
 
 __all__ = [
@@ -52,5 +54,8 @@ __all__ = [
     "NotificationCategory",
     "NotificationPreference",
     "UserTrustedDevice",
+    "RazorpayWebhookEvent",
+    "KycStatus",
+    "UserKycProfile",
 ]
 

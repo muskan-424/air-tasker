@@ -1,15 +1,18 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.platform_security import Notification
 from app.models.user import User
 from app.schemas.notifications import NotificationOut, NotificationPrefsOut, NotificationPrefsUpdate
+from app.services.notification_realtime import notification_hub
 from app.services.notification_service import get_or_create_prefs
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
@@ -96,3 +99,29 @@ async def put_prefs(
         email_escrow=p.email_escrow,
         email_dispute=p.email_dispute,
     )
+
+
+@router.websocket("/ws")
+async def notifications_ws(websocket: WebSocket):
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008, reason="missing token")
+        return
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        user_uuid = uuid.UUID(payload.get("sub"))
+    except (JWTError, ValueError, TypeError):
+        await websocket.close(code=1008, reason="invalid token")
+        return
+
+    await notification_hub.connect(user_uuid, websocket)
+    try:
+        while True:
+            # Keep alive: accept ping and return pong.
+            msg = await websocket.receive_text()
+            if (msg or "").strip().lower() == "ping":
+                await websocket.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await notification_hub.disconnect(user_uuid, websocket)
