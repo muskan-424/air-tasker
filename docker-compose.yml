@@ -43,9 +43,8 @@ services:
       - ./backend_fastapi/.env.docker.example
     ports:
       - "4000:4000"
-    environment:
-      # Uncomment if you started Redis with --profile cache:
-      # REDIS_URL: redis://redis:6379/0
+    # For optional Redis, set REDIS_URL in backend_fastapi/.env.docker.example
+    environment: {}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:4000/api/health', timeout=3).getcode()==200 else 1)"]
       interval: 10s
