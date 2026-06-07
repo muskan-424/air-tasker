@@ -14,6 +14,7 @@ import {
 const NAV_LINKS = [
   { href: "/poster",   label: "Poster Sandbox", icon: PenLine },
   { href: "/tasker",   label: "Tasker Radar",   icon: Radio },
+  { href: "/my-tasks", label: "My Tasks",       icon: LayoutDashboard },
   { href: "/chat",     label: "AI Chat",         icon: MessageSquare },
   { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
   { href: "/payments", label: "Payments",        icon: CreditCard },

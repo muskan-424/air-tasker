@@ -121,6 +121,69 @@ async def publish_task(
     )
 
 
+def _task_to_feed_item(task: Task) -> TaskFeedItem:
+    return TaskFeedItem(
+        id=str(task.id),
+        poster_id=str(task.poster_id),
+        status=task.status.value,
+        category=task.category,
+        subcategory=task.subcategory,
+        task_schema=task.task_schema,
+    )
+
+
+async def _get_task_or_404(db: AsyncSession, task_id: str) -> Task:
+    try:
+        task_uuid = uuid.UUID(task_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task_id")
+    result = await db.execute(select(Task).where(Task.id == task_uuid))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return task
+
+
+async def _user_can_view_task(db: AsyncSession, task: Task, user: User) -> bool:
+    if user.role in {UserRole.ADMIN, UserRole.REVIEWER}:
+        return True
+    if task.poster_id == user.id:
+        return True
+    acceptance = await db.execute(
+        select(TaskAcceptance).where(
+            TaskAcceptance.task_id == task.id,
+            TaskAcceptance.tasker_id == user.id,
+        )
+    )
+    return acceptance.scalar_one_or_none() is not None
+
+
+@router.get("/mine", response_model=list[TaskFeedItem])
+async def my_tasks(
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Tasks owned by poster or accepted by tasker."""
+    if current_user.role == UserRole.TASKER:
+        query = (
+            select(Task)
+            .join(TaskAcceptance, TaskAcceptance.task_id == Task.id)
+            .where(TaskAcceptance.tasker_id == current_user.id)
+            .order_by(TaskAcceptance.accepted_at.desc())
+            .limit(limit)
+        )
+    else:
+        query = (
+            select(Task)
+            .where(Task.poster_id == current_user.id)
+            .order_by(Task.created_at.desc())
+            .limit(limit)
+        )
+    result = await db.execute(query)
+    return [_task_to_feed_item(task) for task in result.scalars().all()]
+
+
 @router.get("/feed", response_model=list[TaskFeedItem])
 async def tasks_feed(
     category: str | None = Query(default=None),
@@ -137,17 +200,21 @@ async def tasks_feed(
 
     result = await db.execute(query)
     rows = result.scalars().all()
-    return [
-        TaskFeedItem(
-            id=str(task.id),
-            poster_id=str(task.poster_id),
-            status=task.status.value,
-            category=task.category,
-            subcategory=task.subcategory,
-            task_schema=task.task_schema,
-        )
-        for task in rows
-    ]
+    return [_task_to_feed_item(task) for task in rows]
+
+
+@router.get("/{task_id}", response_model=TaskFeedItem)
+async def get_task(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = await _get_task_or_404(db, task_id)
+    if task.status == TaskStatus.PUBLISHED and current_user.role == UserRole.TASKER:
+        return _task_to_feed_item(task)
+    if not await _user_can_view_task(db, task, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
+    return _task_to_feed_item(task)
 
 
 @router.post("/{task_id}/accept", response_model=AcceptTaskResponse)
