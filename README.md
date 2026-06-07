@@ -1,6 +1,6 @@
-# AI-First Airtasker Clone for India 🚀
+# VayuTask AI — India Gig Marketplace
 
-An AI-native peer-to-peer services marketplace optimized for the Indian gig economy. This platform uses AI to reduce friction, eliminate language barriers, and ensure fair pricing.
+**VayuTask AI** is an AI-native peer-to-peer services marketplace (Airtasker-style) optimized for the Indian gig economy. The repo contains a **FastAPI** backend (`backend_fastapi/`) and a **Next.js** web app (`frontend_nextjs/`).
 
 ## 🌟 Core Features
 
@@ -34,8 +34,39 @@ An AI-native peer-to-peer services marketplace optimized for the Indian gig econ
    git clone https://github.com/muskan-424/air-tasker.git
    cd air-tasker
    ```
-2. **Setup Backend:**
-   Navigate into the `backend_fastapi` directory, configure your `.env` based on `.env.example`, and install the dependencies from `requirements.txt`.
+2. **Backend:** Use Docker (recommended below) or install Python deps from `backend_fastapi/requirements.txt` and copy `backend_fastapi/.env.example` → `.env`.
+3. **Frontend:** See [Frontend (Next.js)](#frontend-nextjs) below.
+
+### Repo scripts (from root)
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev:backend` | Start API + Postgres via Docker Compose |
+| `npm run dev:frontend` | Start Next.js on http://localhost:3000 |
+| `npm run install:frontend` | Install frontend dependencies |
+| `npm run build:frontend` | Production build of the web app |
+
+Run API and UI in **two terminals**: `npm run dev:backend` then `npm run dev:frontend`.
+
+## Frontend (Next.js)
+
+The web UI lives in `frontend_nextjs/` (brand name: **VayuTask AI**).
+
+```bash
+cd frontend_nextjs
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 and register or log in.
+
+**How the frontend talks to the API**
+
+- **REST:** By default `NEXT_PUBLIC_API_BASE` is empty. The browser calls `/api/...` on the Next dev server; `next.config.mjs` rewrites those requests to `http://localhost:4000` (override with `NEXT_PUBLIC_API_REWRITE_TARGET`).
+- **WebSockets** (chat, notifications): Must hit the API directly — set `NEXT_PUBLIC_WS_BASE=ws://localhost:4000` in `.env.local` (included in `.env.local.example`).
+
+**Definition of done (local):** With `docker compose up` running, login at http://localhost:3000/login succeeds and the navbar shows API online.
 
 ## Docker Quickstart (Backend + Postgres)
 

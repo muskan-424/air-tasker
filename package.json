@@ -1,0 +1,18 @@
+{
+  "name": "vayutask-airtasker",
+  "private": true,
+  "description": "VayuTask AI — India gig marketplace (FastAPI + Next.js)",
+  "scripts": {
+    "dev:backend": "docker compose up --build",
+    "dev:backend:detached": "docker compose up --build -d",
+    "dev:frontend": "npm run dev --prefix frontend_nextjs",
+    "dev:frontend:install": "npm install --prefix frontend_nextjs && npm run dev --prefix frontend_nextjs",
+    "build:frontend": "npm run build --prefix frontend_nextjs",
+    "lint:frontend": "npm run lint --prefix frontend_nextjs",
+    "install:frontend": "npm install --prefix frontend_nextjs",
+    "dev:all": "concurrently -n api,web -c blue,green \"docker compose up --build\" \"npm run dev --prefix frontend_nextjs\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
