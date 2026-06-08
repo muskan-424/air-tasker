@@ -16,7 +16,7 @@ from app.schemas.chat import AgentChatResponse, AgentToolTrace
 from app.services.agent_confidence import confidence_for_response, confidence_from_tool_trace
 from app.services.gemini_chat_service import refine_with_gemini, synthesize_reply
 from app.services.hybrid_rag_service import HybridRAGService
-from app.services.task_chat_schema_service import build_ai_schema_from_message
+from app.services.task_chat_schema_service import resolve_ai_schema
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
 
 
@@ -173,12 +173,12 @@ class AgentChatService:
 
     async def _tool_create_task_draft_from_chat(
         self, db: AsyncSession, user: User, message: str
-    ) -> tuple[str, AgentToolTrace]:
-        ai = build_ai_schema_from_message(message)
+    ) -> tuple[str, AgentToolTrace, str, dict]:
+        ai, schema_provider = resolve_ai_schema(message)
         draft = TaskDraft(
             poster_id=user.id,
             ai_schema=ai,
-            ai_explain="Created from chat (rule-based schema).",
+            ai_explain=f"Created from chat ({schema_provider} schema).",
         )
         db.add(draft)
         await db.commit()
@@ -190,17 +190,23 @@ class AgentChatService:
             f"Category: {ai.get('category')} | Budget hint: INR {pr.get('min')}-{pr.get('max')}\n\n"
             f"Live karne ke liye chat me bolo: publish (ya REST: POST /api/tasks/{draft.id}/publish)."
         )
-        return text, AgentToolTrace(name="create_task_draft", used=True, details=f"draft_id={draft.id}")
+        return (
+            text,
+            AgentToolTrace(name="create_task_draft", used=True, details=f"draft_id={draft.id}"),
+            str(draft.id),
+            ai,
+        )
 
     async def _tool_publish_draft_from_chat(
         self, db: AsyncSession, user: User, message: str
-    ) -> tuple[str, AgentToolTrace]:
+    ) -> tuple[str, AgentToolTrace, str | None]:
         did = await self._resolve_draft_id_for_publish(db, user, message)
         if not did:
             return (
                 "Koi unpublished draft nahi mila. Pehle task ka description bhejo, jaise: "
                 "'create task: plumber needed for leaking tap in Indirapuram, budget 800'.",
                 AgentToolTrace(name="publish_draft", used=True, details="no_draft"),
+                None,
             )
         try:
             task = await publish_draft_to_task(db, user, did)
@@ -208,10 +214,12 @@ class AgentChatService:
             return (
                 f"Publish nahi ho saka: {e!s}",
                 AgentToolTrace(name="publish_draft", used=True, details=f"error={e.code}"),
+                None,
             )
         return (
             f"Task live ho gaya. task_id: {task.id}\nTaskers ab apply kar sakte hain.",
             AgentToolTrace(name="publish_draft", used=True, details=f"task_id={task.id}"),
+            str(task.id),
         )
 
     @staticmethod
@@ -372,7 +380,7 @@ class AgentChatService:
             )
 
         if self._detect_publish_intent(message):
-            text, trace = await self._tool_publish_draft_from_chat(db, user, message)
+            text, trace, task_id = await self._tool_publish_draft_from_chat(db, user, message)
             traces.append(trace)
             conf = confidence_from_tool_trace(trace)
             final, prov = await self._finalize_llm_reply(text, "publish_draft", message, language, conf, tone)
@@ -382,6 +390,7 @@ class AgentChatService:
                 suggested_actions=["view_feed", "share_task_link"],
                 tool_traces=traces,
                 llm_provider=prov,
+                task_id=task_id,
                 **self._flags(conf),
             )
 
@@ -434,7 +443,7 @@ class AgentChatService:
                     llm_provider=prov,
                     **self._flags(conf),
                 )
-            text, trace = await self._tool_create_task_draft_from_chat(db, user, message)
+            text, trace, draft_id, draft_schema = await self._tool_create_task_draft_from_chat(db, user, message)
             traces = [trace]
             conf = confidence_from_tool_trace(trace)
             final, prov = await self._finalize_llm_reply(text, intent, message, language, conf, tone)
@@ -445,6 +454,8 @@ class AgentChatService:
                 suggested_actions=["publish_draft", "edit_draft_via_api"],
                 tool_traces=traces,
                 llm_provider=prov,
+                draft_id=draft_id,
+                draft_schema=draft_schema,
                 **self._flags(conf),
             )
 

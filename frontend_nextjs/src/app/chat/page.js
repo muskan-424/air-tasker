@@ -14,7 +14,8 @@ import {
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { chatAPI } from "@/lib/api";
+import { chatAPI, healthAPI } from "@/lib/api";
+import TaskDraftReviewCard from "@/components/TaskDraftReviewCard";
 
 const LANGUAGES = [
   { code: "hi", label: "हिंदी (Hindi)" },
@@ -60,6 +61,16 @@ function nextId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+const SUGGESTED_ACTION_PROMPTS = {
+  publish_draft: "publish",
+  create_new_task: "create a task for AC repair at home tomorrow",
+  describe_task_then_chat: "create task: plumber for kitchen tap leak in Indirapuram, budget 800",
+  refine_search: "show more nearby tech tasks",
+  apply_to_task: "I want to apply to the first task",
+  ask_followup: "tell me more",
+  refine_answer: "make that shorter",
+};
+
 function mapAssistantPayload(data) {
   return {
     id: nextId(),
@@ -74,6 +85,9 @@ function mapAssistantPayload(data) {
     needsVerification: data.needs_verification,
     llmProvider: data.llm_provider,
     followUpRequired: data.follow_up_required,
+    draftId: data.draft_id || null,
+    draftSchema: data.draft_schema || null,
+    taskId: data.task_id || null,
   };
 }
 
@@ -92,6 +106,7 @@ export default function TranslatedChat() {
   const [apiError, setApiError] = useState(null);
   const [showTraces, setShowTraces] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [aiCaps, setAiCaps] = useState(null);
 
   const wsRef = useRef(null);
   const bottomRef = useRef(null);
@@ -130,6 +145,13 @@ export default function TranslatedChat() {
       setHistoryLoading(false);
     }
   }, [isLoggedIn, chatLang, persistSession]);
+
+  useEffect(() => {
+    healthAPI
+      .capabilities()
+      .then(setAiCaps)
+      .catch(() => setAiCaps(null));
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -291,6 +313,27 @@ export default function TranslatedChat() {
     }
   };
 
+  const handleSuggestedAction = (action) => {
+    if (action === "view_feed") {
+      window.location.href = "/tasker";
+      return;
+    }
+    if (action === "share_task_link" || action === "view_task_details") {
+      const withTask = [...messages].reverse().find((m) => m.taskId);
+      if (withTask?.taskId) {
+        window.location.href = `/tasks/${withTask.taskId}`;
+        return;
+      }
+    }
+    sendText(SUGGESTED_ACTION_PROMPTS[action] || action);
+  };
+
+  const markDraftPublished = (msgId, taskId) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msgId ? { ...m, taskId, draftId: null, draftSchema: null } : m))
+    );
+  };
+
   const startNewSession = () => {
     try {
       localStorage.removeItem(SESSION_KEY);
@@ -326,6 +369,11 @@ export default function TranslatedChat() {
             </h2>
             <p className="chat-subtitle">
               Orders · task help · nearby jobs · create tasks · refine answers
+              {aiCaps && (
+                <span className={`ai-mode-badge ${aiCaps.gemini_enabled ? "gemini" : "rule"}`}>
+                  {aiCaps.gemini_enabled ? "Gemini live" : "Rule-based AI"}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -455,10 +503,24 @@ export default function TranslatedChat() {
                 {msg.role === "assistant" && msg.suggestedActions?.length > 0 && (
                   <div className="suggested-actions">
                     {msg.suggestedActions.map((action) => (
-                      <button key={action} type="button" className="prompt-chip small" onClick={() => sendText(action)}>
+                      <button key={action} type="button" className="prompt-chip small" onClick={() => handleSuggestedAction(action)}>
                         {action}
                       </button>
                     ))}
+                  </div>
+                )}
+
+                {msg.draftId && msg.draftSchema && !msg.taskId && (
+                  <TaskDraftReviewCard
+                    draftId={msg.draftId}
+                    initialSchema={msg.draftSchema}
+                    onPublished={(taskId) => markDraftPublished(msg.id, taskId)}
+                  />
+                )}
+
+                {msg.taskId && (
+                  <div className="task-published-banner">
+                    Task live — <Link href={`/tasks/${msg.taskId}`}>View task details</Link>
                   </div>
                 )}
 
@@ -526,7 +588,10 @@ export default function TranslatedChat() {
         .chat-header-left { display: flex; align-items: center; gap: 16px; }
         .chat-title { font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
         .chat-title-badge { font-size: 0.65rem; padding: 3px 8px; border-radius: 20px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight: 700; }
-        .chat-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px; }
+        .chat-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .ai-mode-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 999px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ai-mode-badge.gemini { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #10b981; }
+        .ai-mode-badge.rule { background: rgba(148,163,184,0.12); border: 1px solid rgba(148,163,184,0.3); color: #94a3b8; }
         .chat-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .lang-pill { display: flex; align-items: center; gap: 6px; background: rgba(20,184,166,0.05); border: 1px solid var(--border-teal); border-radius: 20px; padding: 6px 12px; }
         .pill-label { font-size: 0.68rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; }
@@ -564,6 +629,8 @@ export default function TranslatedChat() {
         .intent-badge, .meta-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; background: rgba(20,184,166,0.1); color: var(--color-teal); font-weight: 600; align-self: flex-start; }
         .trace-box { font-size: 0.72rem; color: var(--color-text-muted); background: rgba(0,0,0,0.2); border: 1px solid var(--border-glow); border-radius: 8px; padding: 8px 10px; }
         .trace-line { margin-bottom: 4px; }
+        .task-published-banner { font-size: 0.82rem; color: var(--color-teal); padding: 8px 12px; border-radius: 10px; background: rgba(20,184,166,0.06); border: 1px solid var(--border-teal); }
+        .task-published-banner :global(a) { color: var(--color-teal); font-weight: 700; text-decoration: underline; }
         .translate-btn { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 16px; background: rgba(20,184,166,0.05); border: 1px solid var(--border-teal); color: var(--color-teal); font-size: 0.75rem; font-weight: 600; cursor: pointer; font-family: inherit; }
         .translating-indicator { display: flex; align-items: center; padding: 10px 14px; }
         .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-teal); margin: 0 3px; animation: typingBounce 0.9s infinite; }

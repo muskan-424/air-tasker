@@ -6,6 +6,10 @@ class TaskDraftCreateRequest(BaseModel):
     language: str | None = Field(default="en", max_length=10)
 
 
+class TaskDraftUpdateRequest(BaseModel):
+    ai_schema: dict
+
+
 class TaskDraftResponse(BaseModel):
     id: str
     poster_id: str
