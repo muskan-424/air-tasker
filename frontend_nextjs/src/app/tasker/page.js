@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { RefreshCw, CheckCircle2, Scan, Layers, Timer, MapPin, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { tasksAPI } from "@/lib/api";
@@ -263,6 +264,9 @@ export default function TaskerRadar() {
                       <p><b>Completion:</b> {schema.completion_criteria}</p>
                     )}
                     <p className="task-id-label">ID: <code>{task.id}</code></p>
+                    <Link href={`/tasks/${task.id}`} className="view-task-link" onClick={(e) => e.stopPropagation()}>
+                      View details →
+                    </Link>
                   </div>
                 )}
 
@@ -322,6 +326,8 @@ export default function TaskerRadar() {
         .task-detail-expanded { padding-top: 12px; border-top: 1px solid var(--border-glow); display: flex; flex-direction: column; gap: 8px; }
         .task-desc { font-size: 0.85rem; color: var(--color-text-muted); line-height: 1.5; }
         .task-id-label { font-size: 0.75rem; color: var(--color-text-muted); } .task-id-label code { color: var(--color-teal); }
+        .view-task-link { display: inline-block; margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: var(--color-teal); text-decoration: none; }
+        .view-task-link:hover { text-decoration: underline; }
         .task-card-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border-glow); }
         .checklist-items { display: flex; flex-direction: column; gap: 6px; }
         .check-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--color-text-muted); cursor: pointer; }

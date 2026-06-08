@@ -101,6 +101,10 @@ export const tasksAPI = {
     return apiFetch(`/api/tasks/feed?${params.toString()}`);
   },
 
+  mine: (limit = 20) => apiFetch(`/api/tasks/mine?limit=${limit}`),
+
+  get: (taskId) => apiFetch(`/api/tasks/${taskId}`),
+
   accept: (taskId, acknowledgement = "I acknowledge the requirements.") =>
     apiFetch(`/api/tasks/${taskId}/accept`, {
       method: "POST",
