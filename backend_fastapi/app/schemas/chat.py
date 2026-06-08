@@ -36,6 +36,12 @@ class AgentToolTrace(BaseModel):
     details: str | None = None
 
 
+class RagSourceItem(BaseModel):
+    source: str
+    score: float
+    excerpt: str
+
+
 class AgentChatResponse(BaseModel):
     reply: str
     intent: str
@@ -52,6 +58,9 @@ class AgentChatResponse(BaseModel):
     draft_id: str | None = None
     draft_schema: dict | None = None
     task_id: str | None = None
+    # Grounding metadata when RAG tool retrieves doc chunks
+    rag_sources: list[RagSourceItem] = []
+    rag_backend: str | None = None
 
 
 class ChatRefineRequest(BaseModel):

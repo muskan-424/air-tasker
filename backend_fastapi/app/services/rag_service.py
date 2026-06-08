@@ -14,9 +14,11 @@ class RetrievedChunk:
 
 def _doc_paths(project_root: Path) -> list[Path]:
     return [
+        project_root / "docs" / "vayutask_help_faq.md",
         project_root / "ai_airtasker_india_proposal.md",
         project_root / "implementation_plan_india.md",
         project_root / "agentic_chatbot_implementation_checklist.md",
+        project_root / "marketplace_next_phases_plan_az.md",
     ]
 
 

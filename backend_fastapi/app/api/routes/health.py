@@ -17,12 +17,15 @@ async def capabilities():
     pinecone_on = bool(
         settings.use_pinecone_rag and settings.pinecone_api_key and settings.pinecone_index
     )
+    rag_mode = "pinecone" if pinecone_on else "local"
     return {
         "environment": settings.environment,
         "use_mock_chatbot": settings.use_mock_chatbot,
         "gemini_enabled": gemini_on,
         "gemini_model_fast": settings.gemini_model_fast or settings.gemini_model,
         "pinecone_rag_enabled": pinecone_on,
+        "rag_mode": rag_mode,
+        "rag_namespace": settings.pinecone_namespace,
         "task_schema_provider": "gemini" if gemini_on else "rule",
         "razorpay_configured": bool(settings.razorpay_key_id and settings.razorpay_key_secret),
     }

@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.models.task import Task, TaskAcceptance, TaskStatus
 from app.models.task_draft import TaskDraft
 from app.models.user import User, UserRole
-from app.schemas.chat import AgentChatResponse, AgentToolTrace
+from app.schemas.chat import AgentChatResponse, AgentToolTrace, RagSourceItem
 from app.services.agent_confidence import confidence_for_response, confidence_from_tool_trace
 from app.services.gemini_chat_service import refine_with_gemini, synthesize_reply
 from app.services.hybrid_rag_service import HybridRAGService
@@ -280,20 +280,30 @@ class AgentChatService:
             AgentToolTrace(name="search_tasks", used=True, details=f"count={len(tasks)}"),
         )
 
-    def _tool_rag_answer(self, message: str) -> tuple[str, AgentToolTrace, list[float] | None]:
+    def _tool_rag_answer(
+        self, message: str
+    ) -> tuple[str, AgentToolTrace, list[float] | None, list[RagSourceItem], str]:
         chunks, rag_source = self.rag.retrieve(message, top_k=3)
         if not chunks:
             return (
                 "Yeh app AI-first marketplace hai jahan task post, task discovery, escrow, verification aur disputes handled hote hain. Agar chaho to main details step-by-step bata doon.",
                 AgentToolTrace(name="rag_lookup", used=True, details="fallback_summary|rag=none"),
                 None,
+                [],
+                "none",
             )
         scores = [c.score for c in chunks]
+        sources = [
+            RagSourceItem(source=c.source, score=c.score, excerpt=c.text[:280].strip())
+            for c in chunks
+        ]
         stitched = "\n".join([f"- ({c.source}, score={c.score:.3f}) {c.text[:220]}..." for c in chunks])
         return (
             f"Maine relevant context nikala hai:\n{stitched}\nAgar chaho to isko concise ya Hindi me refine kar deta hoon.",
             AgentToolTrace(name="rag_lookup", used=True, details=f"chunks={len(chunks)}|rag={rag_source}"),
             scores,
+            sources,
+            rag_source,
         )
 
     async def _tool_apply_to_task(
@@ -459,7 +469,7 @@ class AgentChatService:
                 **self._flags(conf),
             )
 
-        text, trace, rag_scores = self._tool_rag_answer(message)
+        text, trace, rag_scores, rag_sources, rag_backend = self._tool_rag_answer(message)
         traces.append(trace)
         conf = confidence_for_response(rag_scores, trace)
         final, prov = await self._finalize_llm_reply(text, intent, message, language, conf, tone)
@@ -469,6 +479,8 @@ class AgentChatService:
             suggested_actions=["refine_answer", "ask_followup"],
             tool_traces=traces,
             llm_provider=prov,
+            rag_sources=rag_sources,
+            rag_backend=rag_backend,
             **self._flags(conf),
         )
 
