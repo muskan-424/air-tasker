@@ -159,6 +159,18 @@ export const chatAPI = {
       body: JSON.stringify({ message, session_id: sessionId, language, tone }),
     }),
 
+  refine: (originalAnswer, instruction, language = "en") =>
+    apiFetch("/api/chat/refine", {
+      method: "POST",
+      body: JSON.stringify({
+        original_answer: originalAnswer,
+        instruction,
+        language,
+      }),
+    }),
+
+  history: (sessionId) => apiFetch(`/api/chat/history/${sessionId}`),
+
   /** Build authenticated WebSocket URL pointing to backend directly */
   buildWsUrl: (token) => `${WS_BASE}/api/chat/ws?token=${token}`,
 };
