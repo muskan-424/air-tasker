@@ -35,6 +35,8 @@ const TONES = [
 const QUICK_PROMPTS = [
   { label: "Last 5 orders", text: "mera last 5 order dikhao" },
   { label: "What is this app?", text: "what this app does" },
+  { label: "How does escrow work?", text: "how does escrow work on this app" },
+  { label: "Disputes help", text: "what if task is disputed" },
   { label: "Nearby tech jobs", text: "near high earning tech tasks" },
   { label: "Create AC repair task", text: "create a task for AC repair at home tomorrow" },
 ];
@@ -88,6 +90,8 @@ function mapAssistantPayload(data) {
     draftId: data.draft_id || null,
     draftSchema: data.draft_schema || null,
     taskId: data.task_id || null,
+    ragSources: data.rag_sources || [],
+    ragBackend: data.rag_backend || null,
   };
 }
 
@@ -370,9 +374,14 @@ export default function TranslatedChat() {
             <p className="chat-subtitle">
               Orders · task help · nearby jobs · create tasks · refine answers
               {aiCaps && (
-                <span className={`ai-mode-badge ${aiCaps.gemini_enabled ? "gemini" : "rule"}`}>
-                  {aiCaps.gemini_enabled ? "Gemini live" : "Rule-based AI"}
-                </span>
+                <>
+                  <span className={`ai-mode-badge ${aiCaps.gemini_enabled ? "gemini" : "rule"}`}>
+                    {aiCaps.gemini_enabled ? "Gemini live" : "Rule-based AI"}
+                  </span>
+                  <span className={`ai-mode-badge ${aiCaps.rag_mode === "pinecone" ? "gemini" : "rule"}`}>
+                    RAG: {aiCaps.rag_mode === "pinecone" ? "Pinecone" : "Local docs"}
+                  </span>
+                </>
               )}
             </p>
           </div>
@@ -524,6 +533,21 @@ export default function TranslatedChat() {
                   </div>
                 )}
 
+                {msg.ragSources?.length > 0 && (
+                  <div className="rag-sources-box">
+                    <span className="rag-sources-title">
+                      Grounded in docs ({msg.ragBackend === "pinecone" ? "Pinecone" : "local"})
+                    </span>
+                    {msg.ragSources.map((src) => (
+                      <div key={`${src.source}-${src.score}`} className="rag-source-line">
+                        <strong>{src.source}</strong>
+                        <span className="rag-score">{(src.score * 100).toFixed(0)}% match</span>
+                        <p>{src.excerpt}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {showTraces && msg.toolTraces?.length > 0 && (
                   <div className="trace-box">
                     {msg.toolTraces.map((t) => (
@@ -631,6 +655,12 @@ export default function TranslatedChat() {
         .trace-line { margin-bottom: 4px; }
         .task-published-banner { font-size: 0.82rem; color: var(--color-teal); padding: 8px 12px; border-radius: 10px; background: rgba(20,184,166,0.06); border: 1px solid var(--border-teal); }
         .task-published-banner :global(a) { color: var(--color-teal); font-weight: 700; text-decoration: underline; }
+        .rag-sources-box { margin-top: 6px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border-teal); background: rgba(20,184,166,0.03); font-size: 0.78rem; }
+        .rag-sources-title { display: block; font-weight: 700; color: var(--color-teal); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.68rem; }
+        .rag-source-line { margin-bottom: 8px; color: var(--color-text-muted); }
+        .rag-source-line strong { color: var(--color-text-main); font-size: 0.75rem; }
+        .rag-score { margin-left: 8px; font-size: 0.68rem; color: var(--color-teal); }
+        .rag-source-line p { margin: 4px 0 0; line-height: 1.4; }
         .translate-btn { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 16px; background: rgba(20,184,166,0.05); border: 1px solid var(--border-teal); color: var(--color-teal); font-size: 0.75rem; font-weight: 600; cursor: pointer; font-family: inherit; }
         .translating-indicator { display: flex; align-items: center; padding: 10px 14px; }
         .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-teal); margin: 0 3px; animation: typingBounce 0.9s infinite; }
