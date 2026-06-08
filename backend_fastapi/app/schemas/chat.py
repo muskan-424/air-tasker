@@ -48,6 +48,10 @@ class AgentChatResponse(BaseModel):
     # Heuristic 0..1; below threshold may skip LLM polish and flag verification
     confidence: float = 0.7
     needs_verification: bool = False
+    # Populated when chat tools create or publish a task draft
+    draft_id: str | None = None
+    draft_schema: dict | None = None
+    task_id: str | None = None
 
 
 class ChatRefineRequest(BaseModel):

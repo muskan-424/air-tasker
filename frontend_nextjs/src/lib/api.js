@@ -87,6 +87,14 @@ export const draftsAPI = {
       method: "POST",
       body: JSON.stringify({ raw_input: rawInput, language }),
     }),
+
+  get: (draftId) => apiFetch(`/api/tasks/drafts/${draftId}`),
+
+  update: (draftId, aiSchema) =>
+    apiFetch(`/api/tasks/drafts/${draftId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ai_schema: aiSchema }),
+    }),
 };
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
