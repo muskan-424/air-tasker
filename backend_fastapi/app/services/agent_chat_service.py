@@ -16,7 +16,7 @@ from app.schemas.chat import AgentChatResponse, AgentToolTrace
 from app.services.agent_confidence import confidence_for_response, confidence_from_tool_trace
 from app.services.gemini_chat_service import refine_with_gemini, synthesize_reply
 from app.services.hybrid_rag_service import HybridRAGService
-from app.services.task_chat_schema_service import build_ai_schema_from_message
+from app.services.task_chat_schema_service import resolve_ai_schema
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
 
 
@@ -174,11 +174,11 @@ class AgentChatService:
     async def _tool_create_task_draft_from_chat(
         self, db: AsyncSession, user: User, message: str
     ) -> tuple[str, AgentToolTrace, str, dict]:
-        ai = build_ai_schema_from_message(message)
+        ai, schema_provider = resolve_ai_schema(message)
         draft = TaskDraft(
             poster_id=user.id,
             ai_schema=ai,
-            ai_explain="Created from chat (rule-based schema).",
+            ai_explain=f"Created from chat ({schema_provider} schema).",
         )
         db.add(draft)
         await db.commit()

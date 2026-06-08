@@ -199,4 +199,5 @@ export const notificationsAPI = {
 
 export const healthAPI = {
   check: () => apiFetch("/api/health"),
+  capabilities: () => apiFetch("/api/health/capabilities"),
 };

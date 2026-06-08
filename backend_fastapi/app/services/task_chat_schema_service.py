@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+from app.services.gemini_task_schema_service import build_task_schema_with_gemini, normalize_task_schema
+
 
 def build_ai_schema_from_message(text: str) -> dict:
     """Infer structured task JSON from free-form chat (rule-based; Gemini can extend later)."""
@@ -44,3 +46,16 @@ def build_ai_schema_from_message(text: str) -> dict:
         "urgencyLevel": urgency,
         "suggestedPriceRange": {"min": min_p, "max": max_p, "currency": "INR"},
     }
+
+
+def resolve_ai_schema(text: str, language: str | None = None) -> tuple[dict, str]:
+    """Build task schema via Gemini when configured, else rule-based parser."""
+    gemini_schema, provider = build_task_schema_with_gemini(text)
+    if gemini_schema:
+        schema = gemini_schema
+    else:
+        schema = normalize_task_schema(build_ai_schema_from_message(text), text)
+        provider = "rule"
+    if language:
+        schema["language"] = language
+    return schema, provider

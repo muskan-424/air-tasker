@@ -14,7 +14,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { chatAPI } from "@/lib/api";
+import { chatAPI, healthAPI } from "@/lib/api";
 import TaskDraftReviewCard from "@/components/TaskDraftReviewCard";
 
 const LANGUAGES = [
@@ -106,6 +106,7 @@ export default function TranslatedChat() {
   const [apiError, setApiError] = useState(null);
   const [showTraces, setShowTraces] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [aiCaps, setAiCaps] = useState(null);
 
   const wsRef = useRef(null);
   const bottomRef = useRef(null);
@@ -144,6 +145,13 @@ export default function TranslatedChat() {
       setHistoryLoading(false);
     }
   }, [isLoggedIn, chatLang, persistSession]);
+
+  useEffect(() => {
+    healthAPI
+      .capabilities()
+      .then(setAiCaps)
+      .catch(() => setAiCaps(null));
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -361,6 +369,11 @@ export default function TranslatedChat() {
             </h2>
             <p className="chat-subtitle">
               Orders · task help · nearby jobs · create tasks · refine answers
+              {aiCaps && (
+                <span className={`ai-mode-badge ${aiCaps.gemini_enabled ? "gemini" : "rule"}`}>
+                  {aiCaps.gemini_enabled ? "Gemini live" : "Rule-based AI"}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -575,7 +588,10 @@ export default function TranslatedChat() {
         .chat-header-left { display: flex; align-items: center; gap: 16px; }
         .chat-title { font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
         .chat-title-badge { font-size: 0.65rem; padding: 3px 8px; border-radius: 20px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight: 700; }
-        .chat-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px; }
+        .chat-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .ai-mode-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 999px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ai-mode-badge.gemini { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #10b981; }
+        .ai-mode-badge.rule { background: rgba(148,163,184,0.12); border: 1px solid rgba(148,163,184,0.3); color: #94a3b8; }
         .chat-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .lang-pill { display: flex; align-items: center; gap: 6px; background: rgba(20,184,166,0.05); border: 1px solid var(--border-teal); border-radius: 20px; padding: 6px 12px; }
         .pill-label { font-size: 0.68rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; }
