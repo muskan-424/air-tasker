@@ -156,6 +156,14 @@ app.include_router(users_router)
 app.include_router(uploads_router)
 
 
+@app.get("/metrics")
+async def prometheus_metrics_root():
+    """Standard Prometheus scrape path (same payload as /api/metrics/prometheus)."""
+    from app.api.routes.metrics import metrics_prometheus
+
+    return await metrics_prometheus()
+
+
 @app.get("/")
 async def root():
     return {"name": settings.app_name, "status": "ok", "env": settings.environment}

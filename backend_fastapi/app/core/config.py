@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     # When true, taskers must have verified KYC to register payout bank details; escrow payout skips if not verified.
     kyc_required_for_payout: bool = False
 
+    # Prometheus scrape endpoint GET /metrics (disable in locked-down prod if needed)
+    enable_prometheus_metrics: bool = True
+
     # Local evidence file uploads (MVP before S3 presign)
     evidence_upload_dir: str = "uploads/evidence"
     evidence_max_file_bytes: int = 10 * 1024 * 1024  # 10 MB

@@ -181,6 +181,8 @@ Suggested alert thresholds (starting point):
 - DB container restart > 3 times in 10 minutes.
 - Notification/payment retry failures increasing continuously for 10 minutes.
 
+Grafana + Prometheus (Phase V): see [observability/README.md](observability/README.md). Dashboard panels map to the thresholds above.
+
 First response checklist:
 - Confirm service state: `docker compose ps`.
 - Check API logs: `docker compose logs api --tail 200`.

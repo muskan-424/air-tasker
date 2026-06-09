@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin_user
@@ -9,8 +9,23 @@ from app.services.metrics_service import snapshot
 from app.services.notification_service import notification_delivery_stats
 from app.services.kyc_metrics_service import kyc_snapshot
 from app.services.payments_metrics_service import payments_snapshot
+from app.workers.job_queue import queue_depth
 
 router = APIRouter(prefix="/api/metrics", tags=["metrics"])
+
+
+@router.get("/prometheus")
+async def metrics_prometheus():
+    """Prometheus text exposition (also mounted at GET /metrics for scrapers)."""
+    if not settings.enable_prometheus_metrics:
+        return Response(content="Prometheus metrics disabled\n", media_type="text/plain", status_code=404)
+
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+    from app.services.prometheus_metrics import JOB_QUEUE_DEPTH
+
+    JOB_QUEUE_DEPTH.set(queue_depth())
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @router.get("/internal/summary")

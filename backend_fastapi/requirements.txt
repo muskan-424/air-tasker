@@ -12,6 +12,9 @@ python-multipart
 slowapi
 redis
 
+# Observability
+prometheus-client
+
 # Agent / RAG
 pinecone>=8.0.0
 google-generativeai>=0.8.0
