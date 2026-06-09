@@ -3,6 +3,7 @@ const apiRewriteTarget =
   process.env.NEXT_PUBLIC_API_REWRITE_TARGET || "http://localhost:4000";
 
 const nextConfig = {
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async rewrites() {
     return [
       {

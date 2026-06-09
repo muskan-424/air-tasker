@@ -114,12 +114,15 @@ export const tasksAPI = {
 
   get: (taskId) => apiFetch(`/api/tasks/${taskId}`),
 
-  accept: (taskId, acknowledgement = "I acknowledge the requirements.") =>
+  accept: (taskId, acknowledgement = { confirmed: true }) =>
     apiFetch(`/api/tasks/${taskId}/accept`, {
       method: "POST",
       body: JSON.stringify({
         acknowledge_requirements: true,
-        acknowledgement,
+        acknowledgement:
+          typeof acknowledgement === "object" && acknowledgement !== null
+            ? acknowledgement
+            : { note: String(acknowledgement) },
       }),
     }),
 

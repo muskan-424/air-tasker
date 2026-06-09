@@ -44,6 +44,25 @@ npm run dev      # development server (port 3000)
 npm run build    # production build
 npm run start    # serve production build
 npm run lint     # ESLint
+npm run test:e2e # Playwright E2E (needs PostgreSQL + migrated DB)
 ```
+
+### E2E tests (Playwright)
+
+Requires **PostgreSQL** (see repo root `docker compose up db`). Playwright runs `alembic upgrade head`, starts the API, builds Next.js, and serves it for tests.
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e    # build + playwright test
+```
+
+Optional env:
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Postgres URL for migrations + API |
+| `PLAYWRIGHT_SKIP_WEBSERVER` | Set `1` if API and Next are already running |
+| `PLAYWRIGHT_SKIP_MIGRATE` | Set `1` to skip `alembic upgrade head` |
 
 From repo root you can also run `npm run dev:frontend`.
