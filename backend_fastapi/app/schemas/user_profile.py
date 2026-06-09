@@ -3,6 +3,13 @@ from pydantic import BaseModel, Field, field_validator
 from app.services.pin_utils import normalize_india_pin, normalize_pin_list
 
 
+class UserMeResponse(BaseModel):
+    id: str
+    email: str
+    role: str
+    email_verified_at: str | None = None
+
+
 class UserProfileResponse(BaseModel):
     user_id: str
     display_name: str | None = None

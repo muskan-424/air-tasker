@@ -6,7 +6,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.models.user_profile import UserProfile
-from app.schemas.user_profile import UserProfileResponse, UserProfileUpdateRequest
+from app.schemas.user_profile import UserMeResponse, UserProfileResponse, UserProfileUpdateRequest
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -35,6 +35,16 @@ async def _get_or_create_profile(db: AsyncSession, user: User) -> UserProfile:
     await db.commit()
     await db.refresh(profile)
     return profile
+
+
+@router.get("/me", response_model=UserMeResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return UserMeResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        role=current_user.role.value,
+        email_verified_at=current_user.email_verified_at.isoformat() if current_user.email_verified_at else None,
+    )
 
 
 @router.get("/me/profile", response_model=UserProfileResponse)

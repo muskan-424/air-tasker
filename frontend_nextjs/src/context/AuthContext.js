@@ -55,6 +55,19 @@ export function AuthProvider({ children }) {
     window.location.href = "/login";
   };
 
+  const setUserVerified = (verified = true) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = {
+        ...prev,
+        email_verified: verified,
+        email_verified_at: verified ? new Date().toISOString() : null,
+      };
+      localStorage.setItem("vayutask_user", JSON.stringify(next));
+      return next;
+    });
+  };
+
   const _storeAuth = (accessToken, userInfo) => {
     // Decode minimal info from JWT payload (not sensitive)
     let decoded = userInfo;
@@ -72,7 +85,7 @@ export function AuthProvider({ children }) {
   const isLoggedIn = Boolean(token);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, isLoggedIn, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, isLoggedIn, login, register, logout, setUserVerified }}>
       {children}
     </AuthContext.Provider>
   );
