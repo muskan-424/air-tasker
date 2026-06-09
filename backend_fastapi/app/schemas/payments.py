@@ -53,6 +53,12 @@ class RegisterBankPayoutResponse(BaseModel):
     fund_account_id: str
 
 
+class PayoutRegistrationStatusResponse(BaseModel):
+    registered: bool
+    contact_id: str | None = None
+    fund_account_id: str | None = None
+
+
 class EscrowPayoutInitiateRequest(BaseModel):
     task_id: uuid.UUID
 

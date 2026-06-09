@@ -20,6 +20,7 @@ from app.schemas.payments import (
     RazorpayRefundResponse,
     RegisterBankPayoutRequest,
     RegisterBankPayoutResponse,
+    PayoutRegistrationStatusResponse,
 )
 from app.services.escrow_razorpay_refund import try_refund_escrow_capture
 from app.services.metrics_service import inc
@@ -152,6 +153,24 @@ async def manual_razorpay_refund_for_escrow(
 
     await db.commit()
     return RazorpayRefundResponse(issued=True, refund_id=escrow.razorpay_refund_id)
+
+
+@router.get("/razorpay/payout/status", response_model=PayoutRegistrationStatusResponse)
+async def get_payout_registration_status(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Tasker payout bank registration status (RazorpayX contact + fund account)."""
+    if current_user.role != UserRole.TASKER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only taskers can view payout status")
+
+    user = (await db.execute(select(User).where(User.id == current_user.id))).scalar_one()
+    registered = bool(user.razorpay_fund_account_id)
+    return PayoutRegistrationStatusResponse(
+        registered=registered,
+        contact_id=user.razorpay_contact_id,
+        fund_account_id=user.razorpay_fund_account_id,
+    )
 
 
 @router.post("/razorpay/payout/register-bank", response_model=RegisterBankPayoutResponse)

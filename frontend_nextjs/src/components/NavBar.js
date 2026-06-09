@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { href: "/tasker",   label: "Tasker Radar",   icon: Radio },
   { href: "/my-tasks", label: "My Tasks",       icon: LayoutDashboard },
   { href: "/profile",  label: "Profile",        icon: User },
+  { href: "/kyc",      label: "KYC & Payout",   icon: ShieldCheck },
   { href: "/chat",     label: "AI Chat",         icon: MessageSquare },
   { href: "/notifications", label: "Alerts",     icon: Bell },
   { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
