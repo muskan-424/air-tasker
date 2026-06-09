@@ -5,10 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Lock, CreditCard, Zap, Unlock, AlertTriangle, Loader } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { tasksAPI, paymentsAPI } from "@/lib/api";
+import { openRazorpayCheckout } from "@/lib/razorpay";
 
 const STEPS = [
   { id: 0, icon: Lock,         label: "Lock Escrow",          desc: "POST /api/tasks/{id}/escrow/start — Funds held in platform." },
-  { id: 1, icon: CreditCard,   label: "Create Razorpay Order", desc: "POST /api/payments/razorpay/order — Get payment order_id." },
+  { id: 1, icon: CreditCard,   label: "Pay via Razorpay Checkout", desc: "Create order → open Checkout modal → webhook confirms capture." },
   { id: 2, icon: Zap,          label: "Task In Progress",      desc: "Tasker is working. Escrow held securely." },
   { id: 3, icon: Unlock,       label: "Release Funds",         desc: "POST /api/tasks/{id}/escrow/release — Transfer to tasker." },
 ];
@@ -25,6 +26,7 @@ function PaymentsInner() {
   const [ledger, setLedger] = useState([]);
   const [escrowData, setEscrowData] = useState(null);
   const [orderData, setOrderData] = useState(null);
+  const [paymentData, setPaymentData] = useState(null);
 
   // Auto-populate task ID from URL
   useEffect(() => {
@@ -55,7 +57,7 @@ function PaymentsInner() {
     setCompleting(false);
   };
 
-  // ── Step 1: Create Razorpay Order ─────────────────────────────────────────
+  // ── Step 1: Create Razorpay order + open Checkout ─────────────────────────
   const handleCreateOrder = async () => {
     setCompleting(true); setApiError(null);
     try {
@@ -66,19 +68,42 @@ function PaymentsInner() {
         `Order ID: ${data.order_id} · Amount: ₹${data.amount} (${data.amount_paise} paise) · Escrow: ${data.escrow_id}`,
         "success"
       );
-      setCurrentStep(2);
+
+      let paid = false;
+      const result = await openRazorpayCheckout(data, {
+        taskId: taskId.trim(),
+        onSuccess: (response) => {
+          paid = true;
+          setPaymentData(response);
+          addLedger(
+            "Checkout Payment Success",
+            `payment_id: ${response.razorpay_payment_id} · order_id: ${response.razorpay_order_id}. Webhook will mark escrow captured.`,
+            "success"
+          );
+          setCurrentStep(2);
+        },
+        onDismiss: () => {
+          addLedger(
+            "Checkout Closed",
+            "Payment modal closed without completing. Order remains valid — retry Pay when ready.",
+            "warn"
+          );
+        },
+      });
+
+      if (result.status === "dismissed" && !paid) {
+        setApiError("Payment not completed. Click the step button again to reopen Checkout.");
+      }
     } catch (err) {
-      // 501 = Razorpay not configured (expected in dev)
       const isNotConfigured = err.message.includes("not configured") || err.message.includes("501");
       addLedger(
-        isNotConfigured ? "Razorpay Not Configured" : "Order Creation Failed",
+        isNotConfigured ? "Razorpay Not Configured" : "Payment Failed",
         isNotConfigured
           ? "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend .env to enable real payments."
           : err.message,
         isNotConfigured ? "warn" : "error"
       );
       if (isNotConfigured) {
-        // Allow flow to continue without Razorpay
         setCurrentStep(2);
       } else {
         setApiError(err.message);
@@ -113,7 +138,7 @@ function PaymentsInner() {
   };
 
   const stepHandlers = [handleLockEscrow, handleCreateOrder, handleInProgress, handleRelease];
-  const stepBtnLabels = ["Lock Escrow via API", "Create Razorpay Order", "Mark In Progress", "Release Funds via API"];
+  const stepBtnLabels = ["Lock Escrow via API", "Pay with Razorpay Checkout", "Mark In Progress", "Release Funds via API"];
 
   const ledgerTypeColors = { info: "var(--color-text-muted)", success: "#10b981", error: "#f87171", warn: "#f59e0b" };
 
@@ -231,6 +256,11 @@ function PaymentsInner() {
               {orderData && (
                 <div className="order-info">
                   <span>Razorpay Order ID:</span> <code>{orderData.order_id}</code>
+                  {paymentData?.razorpay_payment_id && (
+                    <div style={{ marginTop: 6 }}>
+                      <span>Payment ID:</span> <code>{paymentData.razorpay_payment_id}</code>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -263,8 +293,9 @@ function PaymentsInner() {
             <h4>About Razorpay Integration</h4>
             <ul>
               <li>Escrow is held on our platform and released only after verification passes.</li>
-              <li>Razorpay order creation requires <code>RAZORPAY_KEY_ID</code> &amp; <code>RAZORPAY_KEY_SECRET</code> in <code>backend/.env</code>.</li>
-              <li>Without keys, the order step is skipped gracefully in dev mode.</li>
+              <li>After escrow lock, <b>Razorpay Checkout</b> opens in a modal to collect payment.</li>
+              <li>Requires <code>RAZORPAY_KEY_ID</code> &amp; <code>RAZORPAY_KEY_SECRET</code> in <code>backend_fastapi/.env</code>.</li>
+              <li>Use Razorpay <b>test keys</b> in development; webhook confirms capture on the server.</li>
               <li>Payout to tasker uses <b>RazorpayX Payouts API</b> after escrow release.</li>
             </ul>
           </div>
