@@ -50,6 +50,7 @@ from app.schemas.task import (
     EscrowStartResponse,
     EvidenceUploadRequest,
     EvidenceUploadResponse,
+    EvidenceDetailResponse,
     PublishTaskResponse,
     TaskFeedItem,
     VerificationResponse,
@@ -226,6 +227,37 @@ async def get_task(
     if not await _user_can_view_task(db, task, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
     return _task_to_feed_item(task)
+
+
+@router.get("/{task_id}/evidence", response_model=EvidenceDetailResponse | None)
+async def get_task_evidence(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = await _get_task_or_404(db, task_id)
+    if not await _user_can_view_task(db, task, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
+
+    evidence_result = await db.execute(
+        select(EvidenceUpload)
+        .where(EvidenceUpload.task_id == task.id)
+        .order_by(EvidenceUpload.created_at.desc())
+        .limit(1)
+    )
+    evidence = evidence_result.scalar_one_or_none()
+    if not evidence:
+        return None
+
+    return EvidenceDetailResponse(
+        evidence_id=str(evidence.id),
+        task_id=str(evidence.task_id),
+        uploaded_by_id=str(evidence.uploaded_by_id),
+        before_image_url=evidence.before_image_url,
+        after_image_url=evidence.after_image_url,
+        evidence_video_url=evidence.evidence_video_url,
+        uploaded_at=evidence.created_at.isoformat() if evidence.created_at else None,
+    )
 
 
 @router.post("/{task_id}/accept", response_model=AcceptTaskResponse)

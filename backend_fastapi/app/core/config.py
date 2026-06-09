@@ -69,12 +69,15 @@ class Settings(BaseSettings):
 
     # KYC (stub now; swap provider for Signzy / DigiLocker later)
     kyc_provider: str = "stub"
-    # When true and provider is stub, submissions are auto-verified (dev/demo). Set false to require admin review.
     kyc_stub_auto_verify: bool = True
     # Optional HMAC for POST /api/webhooks/kyc (hex digest of raw body, same as Razorpay webhook style)
     kyc_webhook_secret: str | None = None
     # When true, taskers must have verified KYC to register payout bank details; escrow payout skips if not verified.
     kyc_required_for_payout: bool = False
+
+    # Local evidence file uploads (MVP before S3 presign)
+    evidence_upload_dir: str = "uploads/evidence"
+    evidence_max_file_bytes: int = 10 * 1024 * 1024  # 10 MB
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

@@ -136,6 +136,8 @@ export const tasksAPI = {
   verify: (taskId) =>
     apiFetch(`/api/tasks/${taskId}/verify`, { method: "POST" }),
 
+  getEvidence: (taskId) => apiFetch(`/api/tasks/${taskId}/evidence`),
+
   startEscrow: (taskId) =>
     apiFetch(`/api/tasks/${taskId}/escrow/start`, { method: "POST" }),
 
@@ -151,6 +153,53 @@ export const paymentsAPI = {
       method: "POST",
       body: JSON.stringify({ task_id: taskId }),
     }),
+};
+
+// ─── Uploads ─────────────────────────────────────────────────────────────────
+
+export const uploadsAPI = {
+  /** POST /api/uploads/evidence — store file locally, returns { url }. */
+  uploadEvidenceFile: async (file) => {
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("vayutask_token") : null;
+    const form = new FormData();
+    form.append("file", file);
+
+    const response = await fetch(`${BACKEND_BASE}/api/uploads/evidence`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("vayutask_token");
+        localStorage.removeItem("vayutask_user");
+        window.location.href = "/login";
+      }
+      throw new Error("Unauthorized — please log in again.");
+    }
+
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const err = await response.json();
+        detail = err.detail || err.message || detail;
+      } catch (_) {}
+      throw new Error(detail);
+    }
+
+    return response.json();
+  },
+};
+
+/** Resolve relative upload URLs for img src (works with Next.js /api rewrite). */
+export function resolveMediaUrl(url) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:")) {
+    return url;
+  }
+  return `${BACKEND_BASE}${url.startsWith("/") ? url : `/${url}`}`;
 };
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
