@@ -64,6 +64,11 @@ After deploy, run smoke against the public URL:
 python scripts/smoke_deploy.py https://staging-api.yourdomain.com
 ```
 
+## Closed beta (Phase Y)
+
+See [beta/SUPPORT_PLAYBOOK.md](../beta/SUPPORT_PLAYBOOK.md) for category/PIN limits, feature flags, and KPI targets.
+Admin KPIs: `GET /api/beta/kpis` (admin JWT).
+
 ## Observability
 
 Optional Grafana stack (Phase V):

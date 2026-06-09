@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from app.api.routes.admin_jobs import router as admin_jobs_router
 from app.api.routes.admin_rag import router as admin_rag_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.beta import router as beta_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
 from app.api.routes.kyc import router as kyc_router
@@ -138,6 +139,7 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
+app.include_router(beta_router)
 app.include_router(auth_router)
 app.include_router(verification_router)
 app.include_router(kyc_router)

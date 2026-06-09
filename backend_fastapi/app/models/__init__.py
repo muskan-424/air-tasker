@@ -26,6 +26,7 @@ from app.models.platform_security import (
 from app.models.kyc import KycStatus, UserKycProfile
 from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
+from app.models.beta_feedback import BetaFeedback, BetaFeedbackCategory
 
 __all__ = [
     "User",
@@ -59,5 +60,7 @@ __all__ = [
     "KycStatus",
     "UserKycProfile",
     "UserProfile",
+    "BetaFeedback",
+    "BetaFeedbackCategory",
 ]
 

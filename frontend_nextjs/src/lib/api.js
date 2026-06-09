@@ -361,3 +361,15 @@ export const healthAPI = {
   check: () => apiFetch("/api/health"),
   capabilities: () => apiFetch("/api/health/capabilities"),
 };
+
+// ─── Closed beta ─────────────────────────────────────────────────────────────
+
+export const betaAPI = {
+  getConfig: () => apiFetch("/api/beta/config"),
+  submitFeedback: (payload) =>
+    apiFetch("/api/beta/feedback", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getKpis: () => apiFetch("/api/beta/kpis"),
+};

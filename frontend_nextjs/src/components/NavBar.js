@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useBeta, isNavEnabled } from "@/context/BetaContext";
 import { healthAPI, notificationsAPI, tasksAPI } from "@/lib/api";
 import {
   CATEGORY_COLORS,
@@ -27,11 +28,14 @@ const NAV_LINKS = [
   { href: "/notifications", label: "Alerts",     icon: Bell },
   { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
   { href: "/payments", label: "Payments",        icon: CreditCard },
+  { href: "/feedback", label: "Feedback",        icon: MessageSquare },
 ];
 
 export default function NavBar() {
   const { user, token, isLoggedIn, logout } = useAuth();
+  const { config: betaConfig } = useBeta();
   const pathname = usePathname();
+  const navLinks = NAV_LINKS.filter((link) => isNavEnabled(link.href, betaConfig.feature_flags));
 
   // ── Basic State ───────────────────────────────────────────────────────────
   const [apiOnline, setApiOnline]           = useState(null);
@@ -351,7 +355,7 @@ export default function NavBar() {
               }}
             />
 
-            {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            {navLinks.map(({ href, label, icon: Icon }) => {
               const active = pathname === href;
               return (
                 <a
@@ -621,7 +625,7 @@ export default function NavBar() {
         {/* ── Mobile Menu ─────────────────────────────────────────────────── */}
         {mobileOpen && (
           <div className="vt-mobile-menu">
-            {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            {navLinks.map(({ href, label, icon: Icon }) => {
               const active = pathname === href;
               return (
                 <a key={href} href={href} className={`vt-mobile-link ${active ? "vt-mobile-link-active" : ""}`}>
