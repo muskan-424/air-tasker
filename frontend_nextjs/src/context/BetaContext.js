@@ -49,5 +49,6 @@ export function isNavEnabled(href, featureFlags) {
   if (href === "/chat") return flags.ai_chat !== false;
   if (href === "/kyc") return flags.kyc_payout !== false;
   if (href === "/payments") return flags.razorpay_checkout !== false;
+  if (href === "/disputes") return flags.disputes !== false;
   return true;
 }

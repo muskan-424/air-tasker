@@ -146,6 +146,24 @@ export const tasksAPI = {
 
   releaseEscrow: (taskId) =>
     apiFetch(`/api/tasks/${taskId}/escrow/release`, { method: "POST" }),
+
+  listDisputes: (taskId) => apiFetch(`/api/tasks/${taskId}/disputes`),
+
+  openDispute: (taskId, reason = null) =>
+    apiFetch(`/api/tasks/${taskId}/disputes`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+
+  listOpenDisputes: () => apiFetch("/api/tasks/disputes/open"),
+
+  listReviewVerifications: () => apiFetch("/api/tasks/admin/verifications/review"),
+
+  resolveDispute: (disputeId, outcome = "release", note = null) =>
+    apiFetch(`/api/tasks/disputes/${disputeId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ outcome, note }),
+    }),
 };
 
 // ─── Payments ────────────────────────────────────────────────────────────────
@@ -183,6 +201,14 @@ export const kycAPI = {
         pan,
         aadhaar_last4: aadhaarLast4 || null,
       }),
+    }),
+
+  listPending: () => apiFetch("/api/kyc/admin/pending"),
+
+  review: (userId, decision, reason = null) =>
+    apiFetch(`/api/kyc/admin/${userId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ decision, reason }),
     }),
 };
 
