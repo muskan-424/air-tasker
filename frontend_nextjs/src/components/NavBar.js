@@ -572,6 +572,10 @@ export default function NavBar() {
                       <Radio style={{ width: 14, height: 14 }} />
                       Tasker Radar
                     </a>
+                    <a href="/account" className="vt-dropdown-item">
+                      <ShieldCheck style={{ width: 14, height: 14 }} />
+                      Account & Email OTP
+                    </a>
                     <a href="/notifications" className="vt-dropdown-item">
                       <Bell style={{ width: 14, height: 14 }} />
                       Notifications

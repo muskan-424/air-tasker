@@ -245,6 +245,26 @@ export const profileAPI = {
     }),
 };
 
+// ─── Account & OTP ───────────────────────────────────────────────────────────
+
+export const accountAPI = {
+  me: () => apiFetch("/api/users/me"),
+};
+
+export const verificationAPI = {
+  requestEmailOtp: (purpose = "EMAIL_VERIFICATION") =>
+    apiFetch("/api/verification/email/request-otp", {
+      method: "POST",
+      body: JSON.stringify({ purpose }),
+    }),
+
+  verifyEmailOtp: (code, purpose = "EMAIL_VERIFICATION") =>
+    apiFetch("/api/verification/email/verify", {
+      method: "POST",
+      body: JSON.stringify({ purpose, code }),
+    }),
+};
+
 // ─── Voice ───────────────────────────────────────────────────────────────────
 
 export const voiceAPI = {
