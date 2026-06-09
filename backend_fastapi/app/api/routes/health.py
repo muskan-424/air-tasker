@@ -29,3 +29,14 @@ async def capabilities():
         "task_schema_provider": "gemini" if gemini_on else "rule",
         "razorpay_configured": bool(settings.razorpay_key_id and settings.razorpay_key_secret),
     }
+
+
+@router.get("/api/health/webhooks")
+async def webhooks_readiness():
+    """Readiness probe for webhook routes (no secrets exposed)."""
+    return {
+        "razorpay_webhook_secret_configured": bool(settings.razorpay_webhook_secret),
+        "kyc_webhook_secret_configured": bool(settings.kyc_webhook_secret),
+        "razorpay_webhook_path": "/api/webhooks/razorpay",
+        "kyc_webhook_path": "/api/webhooks/kyc",
+    }

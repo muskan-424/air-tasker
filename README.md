@@ -209,6 +209,15 @@ Deploy command (prod overlay):
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
+Staging overlay (demos / QA):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build -d
+python scripts/smoke_deploy.py http://localhost:4000
+```
+
+See [staging/README.md](staging/README.md) for CORS, HTTPS nginx example, and cloud deploy notes.
+
 Post-deploy readiness checks:
 - Service status: `docker compose ps`
 - API health: `curl http://localhost:4000/api/health`
@@ -220,6 +229,13 @@ Critical smoke tests (minimum):
 - Auth path: login/register endpoint responds successfully.
 - Core task path: list/create task path works.
 - Payments/KYC path: one representative protected endpoint returns expected auth/policy behavior.
+
+Automated smoke (runs the checks above):
+
+```bash
+npm run smoke:staging
+# or: python scripts/smoke_deploy.py https://your-staging-api.example.com
+```
 
 Rollback trigger criteria:
 - API stays unhealthy for > 5 minutes post deploy.

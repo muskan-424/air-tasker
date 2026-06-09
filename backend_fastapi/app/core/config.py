@@ -78,11 +78,20 @@ class Settings(BaseSettings):
     # Prometheus scrape endpoint GET /metrics (disable in locked-down prod if needed)
     enable_prometheus_metrics: bool = True
 
+    # Comma-separated browser origins for CORS; use "*" only in local dev.
+    cors_allowed_origins: str = "*"
+
     # Local evidence file uploads (MVP before S3 presign)
     evidence_upload_dir: str = "uploads/evidence"
     evidence_max_file_bytes: int = 10 * 1024 * 1024  # 10 MB
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    def cors_origins(self) -> list[str]:
+        raw = self.cors_allowed_origins.strip()
+        if raw == "*":
+            return ["*"]
+        return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 settings = Settings()

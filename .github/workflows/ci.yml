@@ -195,3 +195,34 @@ jobs:
       - run: npm run test:e2e:ci
         env:
           NEXT_PUBLIC_API_REWRITE_TARGET: http://localhost:4000
+
+  smoke-staging:
+    name: Staging smoke (docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start staging stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build -d
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4000/api/health >/dev/null; then
+              echo "API healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "API failed to become healthy"
+          docker compose logs api --tail 100
+          exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run post-deploy smoke
+        run: python scripts/smoke_deploy.py http://localhost:4000
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.staging.yml down -v
