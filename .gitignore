@@ -25,6 +25,7 @@ env/
 !**/.env.example
 !**/.env.local.example
 !**/.env.docker.example
+!.env.staging.example
 
 # IDE/editor
 .idea/
