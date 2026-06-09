@@ -183,6 +183,45 @@ export const chatAPI = {
   buildWsUrl: (token) => `${WS_BASE}/api/chat/ws?token=${token}`,
 };
 
+// ─── Voice ───────────────────────────────────────────────────────────────────
+
+export const voiceAPI = {
+  /** Upload audio blob to POST /api/voice/transcribe (multipart). */
+  transcribe: async (audioBlob, languageHint = "auto") => {
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("vayutask_token") : null;
+    const form = new FormData();
+    form.append("file", audioBlob, "recording.webm");
+
+    const params = new URLSearchParams({ language_hint: languageHint });
+    const response = await fetch(`${BACKEND_BASE}/api/voice/transcribe?${params}`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("vayutask_token");
+        localStorage.removeItem("vayutask_user");
+        window.location.href = "/login";
+      }
+      throw new Error("Unauthorized — please log in again.");
+    }
+
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const err = await response.json();
+        detail = err.detail || err.message || detail;
+      } catch (_) {}
+      throw new Error(detail);
+    }
+
+    return response.json();
+  },
+};
+
 // ─── Notifications ───────────────────────────────────────────────────────────
 
 export const notificationsAPI = {
