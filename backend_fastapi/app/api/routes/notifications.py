@@ -37,6 +37,7 @@ async def list_notifications(
             title=n.title,
             body=n.body,
             category=n.category,
+            payload=n.payload,
             read_at=n.read_at.isoformat() if n.read_at else None,
             delivery_status=n.delivery_status,
             created_at=n.created_at.isoformat(),

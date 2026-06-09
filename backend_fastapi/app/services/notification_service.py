@@ -76,13 +76,16 @@ async def create_notification(
         user_id,
         {
             "type": "notification",
-            "id": str(n.id),
-            "title": n.title,
-            "body": n.body,
-            "category": n.category,
-            "delivery_status": n.delivery_status,
-            "read_at": n.read_at.isoformat() if n.read_at else None,
-            "created_at": n.created_at.isoformat() if n.created_at else None,
+            "data": {
+                "id": str(n.id),
+                "title": n.title,
+                "body": n.body,
+                "category": n.category,
+                "payload": n.payload,
+                "delivery_status": n.delivery_status,
+                "read_at": n.read_at.isoformat() if n.read_at else None,
+                "created_at": n.created_at.isoformat() if n.created_at else None,
+            },
         },
     )
 

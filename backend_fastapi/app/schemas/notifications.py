@@ -6,6 +6,7 @@ class NotificationOut(BaseModel):
     title: str
     body: str
     category: str
+    payload: dict | None = None
     read_at: str | None
     delivery_status: str
     created_at: str
