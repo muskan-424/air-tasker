@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/poster",   label: "Poster Sandbox", icon: PenLine },
   { href: "/tasker",   label: "Tasker Radar",   icon: Radio },
   { href: "/my-tasks", label: "My Tasks",       icon: LayoutDashboard },
+  { href: "/profile",  label: "Profile",        icon: User },
   { href: "/chat",     label: "AI Chat",         icon: MessageSquare },
   { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
   { href: "/payments", label: "Payments",        icon: CreditCard },
@@ -559,6 +560,14 @@ export default function NavBar() {
                     </div>
 
                     <div className="vt-dropdown-divider"></div>
+                    <a href="/my-tasks" className="vt-dropdown-item">
+                      <LayoutDashboard style={{ width: 14, height: 14 }} />
+                      My Tasks
+                    </a>
+                    <a href="/profile" className="vt-dropdown-item">
+                      <User style={{ width: 14, height: 14 }} />
+                      Profile
+                    </a>
                     <a href="/poster" className="vt-dropdown-item">
                       <LayoutDashboard style={{ width: 14, height: 14 }} />
                       Poster Sandbox

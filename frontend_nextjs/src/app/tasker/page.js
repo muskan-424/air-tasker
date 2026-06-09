@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { RefreshCw, CheckCircle2, Scan, Layers, Timer, MapPin, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { tasksAPI } from "@/lib/api";
+import { tasksAPI, profileAPI } from "@/lib/api";
 
 const CATEGORY_COLORS = {
   Electrical: { ring: "#f59e0b", glow: "rgba(245,158,11,0.15)" },
@@ -36,6 +36,7 @@ export default function TaskerRadar() {
   const [selected, setSelected] = useState(null);
   const [filterCategory, setFilterCategory] = useState("");
   const [pinInput, setPinInput] = useState("");
+  const [activePin, setActivePin] = useState("");
   const [pinSuccess, setPinSuccess] = useState(false);
 
   // ── Fetch tasks from backend ──────────────────────────────────────────────
@@ -44,7 +45,7 @@ export default function TaskerRadar() {
     setLoading(true);
     setApiError(null);
     try {
-      const data = await tasksAPI.feed(filterCategory || null, 20);
+      const data = await tasksAPI.feed(filterCategory || null, 20, activePin || null);
       setTasks(data);
     } catch (err) {
       setApiError(err.message);
@@ -57,7 +58,21 @@ export default function TaskerRadar() {
     } finally {
       setLoading(false);
     }
-  }, [isLoggedIn, filterCategory]);
+  }, [isLoggedIn, filterCategory, activePin]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    profileAPI
+      .get()
+      .then((p) => {
+        const defaultPin = p.service_pin_codes?.[0] || p.default_location_pin || "";
+        if (defaultPin) {
+          setPinInput(defaultPin);
+          setActivePin(defaultPin);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
@@ -147,7 +162,8 @@ export default function TaskerRadar() {
   // ── PIN unlock simulation ─────────────────────────────────────────────────
   const handlePinSubmit = (e) => {
     e.preventDefault();
-    if (pinInput.trim().length >= 4) {
+    if (pinInput.trim().length === 6) {
+      setActivePin(pinInput.trim());
       setPinSuccess(true);
       setTimeout(() => setPinSuccess(false), 3000);
     }
@@ -206,7 +222,7 @@ export default function TaskerRadar() {
               maxLength={6}
             />
             <button type="submit" className="btn-premium btn-teal pin-btn">
-              {pinSuccess ? "✓ Matched" : "Scan Area"}
+              {pinSuccess ? "✓ Filter applied" : activePin ? `PIN ${activePin}` : "Filter by PIN"}
             </button>
           </form>
         </div>

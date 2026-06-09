@@ -19,6 +19,7 @@ from app.api.routes.notifications import router as notifications_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.task_drafts import router as task_drafts_router
 from app.api.routes.tasks import router as tasks_router
+from app.api.routes.users import router as users_router
 from app.api.routes.verification import router as verification_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.api.routes.voice import router as voice_router
@@ -150,6 +151,7 @@ app.include_router(chat_router)
 app.include_router(voice_router)
 app.include_router(task_drafts_router)
 app.include_router(tasks_router)
+app.include_router(users_router)
 
 
 @app.get("/")

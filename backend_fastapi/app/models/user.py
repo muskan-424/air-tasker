@@ -44,4 +44,5 @@ class User(Base):
     )
     trusted_devices = relationship("UserTrustedDevice", back_populates="user", cascade="all, delete-orphan")
     kyc_profile = relationship("UserKycProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
