@@ -38,6 +38,7 @@ from app.services.task_lifecycle_notifications import (
 from app.services.escrow_razorpay_refund import try_refund_escrow_capture
 from app.services.tasker_escrow_payout import try_escrow_payout_to_tasker
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
+from app.services.pin_utils import normalize_india_pin
 from app.schemas.task import (
     AcceptTaskRequest,
     AcceptTaskResponse,
@@ -187,15 +188,25 @@ async def my_tasks(
 @router.get("/feed", response_model=list[TaskFeedItem])
 async def tasks_feed(
     category: str | None = Query(default=None),
+    pin: str | None = Query(default=None, max_length=10),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    pin_norm: str | None = None
+    if pin:
+        try:
+            pin_norm = normalize_india_pin(pin)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     query = select(Task).where(Task.status == TaskStatus.PUBLISHED)
     if current_user.role == UserRole.POSTER:
         query = query.where(Task.poster_id == current_user.id)
     if category:
         query = query.where(Task.category == category)
+    if pin_norm:
+        query = query.where(Task.task_schema["location"].astext.like(f"%{pin_norm}%"))
     query = query.order_by(Task.created_at.desc()).limit(limit)
 
     result = await db.execute(query)

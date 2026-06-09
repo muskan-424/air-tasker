@@ -25,6 +25,7 @@ from app.models.platform_security import (
 )
 from app.models.kyc import KycStatus, UserKycProfile
 from app.models.user import User, UserRole
+from app.models.user_profile import UserProfile
 
 __all__ = [
     "User",
@@ -57,5 +58,6 @@ __all__ = [
     "RazorpayWebhookEvent",
     "KycStatus",
     "UserKycProfile",
+    "UserProfile",
 ]
 

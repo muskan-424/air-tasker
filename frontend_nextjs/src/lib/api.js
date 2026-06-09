@@ -103,9 +103,10 @@ export const tasksAPI = {
   publish: (draftId) =>
     apiFetch(`/api/tasks/${draftId}/publish`, { method: "POST" }),
 
-  feed: (category = null, limit = 20) => {
+  feed: (category = null, limit = 20, pin = null) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (category) params.set("category", category);
+    if (pin) params.set("pin", pin);
     return apiFetch(`/api/tasks/feed?${params.toString()}`);
   },
 
@@ -181,6 +182,18 @@ export const chatAPI = {
 
   /** Build authenticated WebSocket URL pointing to backend directly */
   buildWsUrl: (token) => `${WS_BASE}/api/chat/ws?token=${token}`,
+};
+
+// ─── User Profile ────────────────────────────────────────────────────────────
+
+export const profileAPI = {
+  get: () => apiFetch("/api/users/me/profile"),
+
+  update: (payload) =>
+    apiFetch("/api/users/me/profile", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ─── Voice ───────────────────────────────────────────────────────────────────
