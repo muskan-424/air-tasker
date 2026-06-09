@@ -44,8 +44,10 @@ from app.schemas.task import (
     AcceptTaskResponse,
     DisputeCreateRequest,
     DisputeCreateResponse,
+    DisputeListItem,
     DisputeResolveRequest,
     DisputeResolveResponse,
+    VerificationReviewItem,
     EscrowReleaseResponse,
     EscrowStartResponse,
     EvidenceUploadRequest,
@@ -213,6 +215,64 @@ async def tasks_feed(
     result = await db.execute(query)
     rows = result.scalars().all()
     return [_task_to_feed_item(task) for task in rows]
+
+
+@router.get("/disputes/open", response_model=list[DisputeListItem])
+async def list_open_disputes(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in {UserRole.ADMIN, UserRole.REVIEWER}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or reviewer only")
+
+    rows = (
+        await db.execute(
+            select(Dispute)
+            .where(Dispute.status == DisputeStatus.OPEN)
+            .order_by(Dispute.created_at.desc())
+            .limit(50)
+        )
+    ).scalars().all()
+    return [
+        DisputeListItem(
+            dispute_id=str(d.id),
+            task_id=str(d.task_id),
+            opened_by_id=str(d.opened_by_id),
+            status=d.status.value,
+            reason=d.reason,
+            created_at=d.created_at.isoformat(),
+        )
+        for d in rows
+    ]
+
+
+@router.get("/admin/verifications/review", response_model=list[VerificationReviewItem])
+async def list_verifications_for_review(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in {UserRole.ADMIN, UserRole.REVIEWER}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or reviewer only")
+
+    rows = (
+        await db.execute(
+            select(VerificationResult)
+            .where(VerificationResult.status != VerificationStatus.PASS)
+            .order_by(VerificationResult.created_at.desc())
+            .limit(50)
+        )
+    ).scalars().all()
+    return [
+        VerificationReviewItem(
+            verification_id=str(v.id),
+            task_id=str(v.task_id),
+            status=v.status.value,
+            confidence=v.confidence,
+            explanation=v.explanation,
+            created_at=v.created_at.isoformat(),
+        )
+        for v in rows
+    ]
 
 
 @router.get("/{task_id}", response_model=TaskFeedItem)
@@ -515,6 +575,36 @@ async def start_escrow(
     )
 
 
+@router.get("/{task_id}/disputes", response_model=list[DisputeListItem])
+async def list_task_disputes(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = await _get_task_or_404(db, task_id)
+    if not await _user_can_view_task(db, task, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
+
+    rows = (
+        await db.execute(
+            select(Dispute)
+            .where(Dispute.task_id == task.id)
+            .order_by(Dispute.created_at.desc())
+        )
+    ).scalars().all()
+    return [
+        DisputeListItem(
+            dispute_id=str(d.id),
+            task_id=str(d.task_id),
+            opened_by_id=str(d.opened_by_id),
+            status=d.status.value,
+            reason=d.reason,
+            created_at=d.created_at.isoformat(),
+        )
+        for d in rows
+    ]
+
+
 @router.post("/{task_id}/disputes", response_model=DisputeCreateResponse)
 async def open_dispute(
     request: Request,
@@ -584,7 +674,37 @@ async def open_dispute(
         reason=payload.reason,
     )
 
-    return DisputeCreateResponse(dispute_id=str(dispute.id), task_id=str(task.id), status=dispute.status.value)
+    return DisputeCreateResponse(dispute_id=str(dispute.id), task_id=str(task.id), status=dispute.status.value    )
+
+
+@router.get("/{task_id}/disputes", response_model=list[DisputeListItem])
+async def list_task_disputes(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = await _get_task_or_404(db, task_id)
+    if not await _user_can_view_task(db, task, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
+
+    rows = (
+        await db.execute(
+            select(Dispute)
+            .where(Dispute.task_id == task.id)
+            .order_by(Dispute.created_at.desc())
+        )
+    ).scalars().all()
+    return [
+        DisputeListItem(
+            dispute_id=str(d.id),
+            task_id=str(d.task_id),
+            opened_by_id=str(d.opened_by_id),
+            status=d.status.value,
+            reason=d.reason,
+            created_at=d.created_at.isoformat(),
+        )
+        for d in rows
+    ]
 
 
 @router.post("/{task_id}/escrow/release", response_model=EscrowReleaseResponse)
