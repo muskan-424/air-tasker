@@ -153,6 +153,34 @@ export const paymentsAPI = {
       method: "POST",
       body: JSON.stringify({ task_id: taskId }),
     }),
+
+  payoutStatus: () => apiFetch("/api/payments/razorpay/payout/status"),
+
+  registerPayoutBank: (beneficiaryName, ifsc, accountNumber) =>
+    apiFetch("/api/payments/razorpay/payout/register-bank", {
+      method: "POST",
+      body: JSON.stringify({
+        beneficiary_name: beneficiaryName,
+        ifsc,
+        account_number: accountNumber,
+      }),
+    }),
+};
+
+// ─── KYC ─────────────────────────────────────────────────────────────────────
+
+export const kycAPI = {
+  status: () => apiFetch("/api/kyc/me"),
+
+  submit: (fullName, pan, aadhaarLast4 = null) =>
+    apiFetch("/api/kyc/submit", {
+      method: "POST",
+      body: JSON.stringify({
+        full_name: fullName,
+        pan,
+        aadhaar_last4: aadhaarLast4 || null,
+      }),
+    }),
 };
 
 // ─── Uploads ─────────────────────────────────────────────────────────────────
