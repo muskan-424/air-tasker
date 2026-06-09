@@ -5,6 +5,12 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { healthAPI, notificationsAPI, tasksAPI } from "@/lib/api";
 import {
+  CATEGORY_COLORS,
+  filterNotifications,
+  getNotificationAction,
+  normalizeNotification,
+} from "@/lib/notifications";
+import {
   LogOut, Bell, CheckCheck, Zap, MessageSquare,
   ShieldCheck, CreditCard, Radio, PenLine, Menu, X,
   Search, ChevronDown, Sparkles, User, Settings,
@@ -17,16 +23,10 @@ const NAV_LINKS = [
   { href: "/my-tasks", label: "My Tasks",       icon: LayoutDashboard },
   { href: "/profile",  label: "Profile",        icon: User },
   { href: "/chat",     label: "AI Chat",         icon: MessageSquare },
+  { href: "/notifications", label: "Alerts",     icon: Bell },
   { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
   { href: "/payments", label: "Payments",        icon: CreditCard },
 ];
-
-const CATEGORY_COLORS = {
-  TASK:    { color: "#14b8a6", bg: "rgba(20,184,166,0.1)"  },
-  ESCROW:  { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  DISPUTE: { color: "#f87171", bg: "rgba(248,113,113,0.1)" },
-  SYSTEM:  { color: "#94a3b8", bg: "rgba(148,163,184,0.1)" },
-};
 
 export default function NavBar() {
   const { user, token, isLoggedIn, logout } = useAuth();
@@ -129,8 +129,9 @@ export default function NavBar() {
     if (!isLoggedIn) return;
     try {
       const data = await notificationsAPI.list(20);
-      setNotifications(data);
-      setUnreadCount(data.filter((n) => !n.read_at).length);
+      const normalized = (data || []).map(normalizeNotification).filter(Boolean);
+      setNotifications(normalized);
+      setUnreadCount(normalized.filter((n) => !n.read_at).length);
     } catch { /* silent — backend may be offline */ }
   }, [isLoggedIn]);
 
@@ -148,8 +149,12 @@ export default function NavBar() {
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
-          if (msg.type === "notification") {
-            setNotifications((prev) => [msg.data, ...prev].slice(0, 30));
+          const item = normalizeNotification(msg);
+          if (item?.id) {
+            setNotifications((prev) => {
+              if (prev.some((n) => n.id === item.id)) return prev;
+              return [item, ...prev].slice(0, 30);
+            });
             setUnreadCount((c) => c + 1);
             setShouldShake(true);
             setTimeout(() => setShouldShake(false), 800);
@@ -233,7 +238,8 @@ export default function NavBar() {
     { title: "Vision Proof Verification", subtitle: "Validate completed works using AI analysis", href: "/verify", icon: ShieldCheck, category: "Navigation" },
     { title: "Escrow & Ledger Payments", subtitle: "Secure transactions and payment logs", href: "/payments", icon: CreditCard, category: "Navigation" },
     { title: "Post a New Task Draft", subtitle: "Fast track to create a gig listing", href: "/poster", icon: Sparkles, category: "Quick Actions" },
-    { title: "Open Notifications Feed", subtitle: "Toggle view of all system alerts", action: "open_notifications", icon: Bell, category: "Quick Actions" },
+    { title: "Notification Center", subtitle: "Full inbox, filters, and preferences", href: "/notifications", icon: Bell, category: "Navigation" },
+    { title: "Open Notifications Feed", subtitle: "Toggle bell dropdown in navbar", action: "open_notifications", icon: Bell, category: "Quick Actions" },
     { title: "System Connection Check", subtitle: "Inspect FastAPI backend API status", action: "check_health", icon: Activity, category: "System" },
     { title: "Sign Out Session", subtitle: "Clear credentials and log out", action: "logout", icon: LogOut, category: "Account", authRequired: true }
   ];
@@ -299,20 +305,9 @@ export default function NavBar() {
   };
 
   // ── Notification Tab Filtering & CTA Links ───────────────────────────────
-  const filteredNotifs = notifications.filter((n) => {
-    if (notifTab === "unread") return !n.read_at;
-    if (notifTab === "system") return (n.category || "").toUpperCase() === "SYSTEM";
-    if (notifTab === "escrow") return (n.category || "").toUpperCase() === "ESCROW";
-    return true;
-  });
+  const filteredNotifs = filterNotifications(notifications, notifTab);
 
-  const getActionCTA = (n) => {
-    const cat = (n.category || "").toUpperCase();
-    if (cat === "ESCROW") return { label: "Lock Escrow Payout", href: `/payments?task_id=${n.task_id || ""}` };
-    if (cat === "TASK") return { label: "View Task Radar", href: "/tasker" };
-    if (cat === "DISPUTE") return { label: "Open AI Chat", href: "/chat" };
-    return null;
-  };
+  const getActionCTA = getNotificationAction;
 
   const statusColor = apiOnline === null ? "#94a3b8" : apiOnline ? "#10b981" : "#ef4444";
   const statusLabel = apiOnline === null ? "Checking..." : apiOnline ? `Online • ${apiLatency || 0}ms` : "Offline";
@@ -479,6 +474,7 @@ export default function NavBar() {
                     </div>
 
                     <div className="vt-notif-footer">
+                      <a href="/notifications" className="vt-notif-view-all">View all notifications</a>
                       <span className="vt-notif-ws-label">
                         <span className="vt-ws-dot" style={{ background: wsRef.current?.readyState === 1 ? "#10b981" : "#64748b" }}></span>
                         Real-time active engine
@@ -575,6 +571,10 @@ export default function NavBar() {
                     <a href="/tasker" className="vt-dropdown-item">
                       <Radio style={{ width: 14, height: 14 }} />
                       Tasker Radar
+                    </a>
+                    <a href="/notifications" className="vt-dropdown-item">
+                      <Bell style={{ width: 14, height: 14 }} />
+                      Notifications
                     </a>
                     <a href="/chat" className="vt-dropdown-item">
                       <MessageSquare style={{ width: 14, height: 14 }} />
@@ -1207,8 +1207,16 @@ export default function NavBar() {
           border-top: 1px solid var(--border-glow);
           display: flex;
           align-items: center;
-          justify-content: center;
+          justify-content: space-between;
+          gap: 8px;
         }
+        .vt-notif-view-all {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: var(--color-teal);
+          text-decoration: none;
+        }
+        .vt-notif-view-all:hover { text-decoration: underline; }
         .vt-notif-ws-label {
           display: flex;
           align-items: center;

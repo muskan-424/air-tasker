@@ -292,6 +292,14 @@ export const notificationsAPI = {
   markRead: (notificationId) =>
     apiFetch(`/api/notifications/${notificationId}/read`, { method: "PATCH" }),
 
+  getPreferences: () => apiFetch("/api/notifications/preferences"),
+
+  updatePreferences: (payload) =>
+    apiFetch("/api/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+
   /** Build authenticated WebSocket URL for real-time push notifications */
   buildWsUrl: (token) => `${WS_BASE}/api/notifications/ws?token=${token}`,
 };
