@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { chatAPI, healthAPI } from "@/lib/api";
 import TaskDraftReviewCard from "@/components/TaskDraftReviewCard";
+import VoiceInputButton from "@/components/VoiceInputButton";
 
 const LANGUAGES = [
   { code: "hi", label: "हिंदी (Hindi)" },
@@ -588,6 +589,11 @@ export default function TranslatedChat() {
       </div>
 
       <div className="chat-input-row glass-card">
+        <VoiceInputButton
+          languageHint={chatLang}
+          disabled={sending || !isLoggedIn}
+          onTranscript={(text) => setInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))}
+        />
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}

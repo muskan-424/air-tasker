@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Mic, Square, Sparkles, CheckCircle2, Play, FileText, Landmark, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { draftsAPI, tasksAPI } from "@/lib/api";
+import VoiceInputButton from "@/components/VoiceInputButton";
 
 export default function PosterSandbox() {
   const { isLoggedIn, user } = useAuth();
@@ -232,6 +233,16 @@ export default function PosterSandbox() {
               className="input-textarea"
             />
 
+            <div className="voice-row">
+              <VoiceInputButton
+                disabled={!isLoggedIn}
+                onTranscript={(text) =>
+                  setInputText((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))
+                }
+              />
+              <span className="voice-hint">Record → edit text above → generate draft</span>
+            </div>
+
             <button
               onClick={submitToAI}
               disabled={!inputText && !audioUrl}
@@ -374,6 +385,8 @@ export default function PosterSandbox() {
         .divider-row::before { margin-right: 12px; } .divider-row::after { margin-left: 12px; }
         .input-textarea { width: 100%; background: rgba(7,9,19,0.4); border: 1px solid var(--border-glow); border-radius: 12px; padding: 16px; color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; resize: none; min-height: 100px; outline: none; transition: border 0.3s ease; }
         .input-textarea:focus { border-color: var(--color-teal); }
+        .voice-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .voice-hint { font-size: 0.78rem; color: var(--color-text-muted); }
         .info-bullets { display: flex; flex-direction: column; gap: 24px; }
         .info-bullet { display: flex; gap: 16px; }
         .bullet-icon-box { width: 40px; height: 40px; border-radius: 10px; background: rgba(20,184,166,0.1); border: 1px solid var(--border-teal); color: var(--color-teal); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
