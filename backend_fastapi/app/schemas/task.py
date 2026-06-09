@@ -44,6 +44,16 @@ class EvidenceUploadResponse(BaseModel):
     uploaded_by_id: str
 
 
+class EvidenceDetailResponse(BaseModel):
+    evidence_id: str
+    task_id: str
+    uploaded_by_id: str
+    before_image_url: str | None = None
+    after_image_url: str | None = None
+    evidence_video_url: str | None = None
+    uploaded_at: str | None = None
+
+
 class VerificationResponse(BaseModel):
     verification_id: str
     task_id: str

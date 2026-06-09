@@ -37,6 +37,7 @@ env/
 dist/
 build/
 *.egg-info/
+backend_fastapi/uploads/
 
 # Root npm (repo scripts / concurrently)
 node_modules/

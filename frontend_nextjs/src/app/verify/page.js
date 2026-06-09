@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { Upload, ShieldCheck, AlertTriangle, Loader } from "lucide-react";
+import React, { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Upload, ShieldCheck, AlertTriangle, Loader, Link2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { tasksAPI } from "@/lib/api";
+import EvidenceFilePicker from "@/components/EvidenceFilePicker";
+import { tasksAPI, uploadsAPI, resolveMediaUrl } from "@/lib/api";
 
 const CONFIDENCE_COLORS = {
   PASS: { ring: "#10b981", glow: "rgba(16,185,129,0.2)", label: "VERIFIED", textColor: "#10b981" },
@@ -11,43 +13,126 @@ const CONFIDENCE_COLORS = {
   FAIL: { ring: "#ef4444", glow: "rgba(239,68,68,0.2)", label: "FAILED", textColor: "#ef4444" },
 };
 
-export default function VerifyPage() {
-  const { isLoggedIn } = useAuth();
+function VerifyInner() {
+  const { isLoggedIn, user } = useAuth();
+  const searchParams = useSearchParams();
+  const urlTaskId = searchParams?.get("task_id") || "";
 
-  const [taskId, setTaskId] = useState("");
-  const [beforeUrl, setBeforeUrl] = useState("https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600");
-  const [afterUrl, setAfterUrl] = useState("https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=600");
+  const [taskId, setTaskId] = useState(urlTaskId);
+  const [useUrls, setUseUrls] = useState(false);
+  const [beforeUrl, setBeforeUrl] = useState("");
+  const [afterUrl, setAfterUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [stage, setStage] = useState("input"); // 'input' | 'uploading' | 'verifying' | 'result'
+  const [beforeFile, setBeforeFile] = useState(null);
+  const [afterFile, setAfterFile] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
+  const [beforePreview, setBeforePreview] = useState("");
+  const [afterPreview, setAfterPreview] = useState("");
+  const [stage, setStage] = useState("input");
   const [result, setResult] = useState(null);
   const [apiError, setApiError] = useState(null);
   const [sliderVal, setSliderVal] = useState(50);
   const [evidenceId, setEvidenceId] = useState(null);
+  const [existingEvidence, setExistingEvidence] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const isTasker = user?.role === "TASKER";
+  const isPoster = user?.role === "POSTER";
+
+  useEffect(() => {
+    if (urlTaskId) setTaskId(urlTaskId);
+  }, [urlTaskId]);
+
+  useEffect(() => {
+    if (!taskId.trim() || !isLoggedIn) {
+      setExistingEvidence(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await tasksAPI.getEvidence(taskId.trim());
+        if (!cancelled && data) {
+          setExistingEvidence(data);
+          setBeforeUrl(data.before_image_url || "");
+          setAfterUrl(data.after_image_url || "");
+          setVideoUrl(data.evidence_video_url || "");
+          setEvidenceId(data.evidence_id);
+        }
+      } catch (_) {
+        if (!cancelled) setExistingEvidence(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [taskId, isLoggedIn]);
+
+  const setFileWithPreview = (setter, previewSetter) => (file) => {
+    setter(file);
+    previewSetter(file ? URL.createObjectURL(file) : "");
+  };
+
+  const resolveBefore = () => (useUrls ? beforeUrl : beforePreview || resolveMediaUrl(existingEvidence?.before_image_url));
+  const resolveAfter = () => (useUrls ? afterUrl : afterPreview || resolveMediaUrl(existingEvidence?.after_image_url));
+
+  const uploadFileIfNeeded = async (file, fallbackUrl) => {
+    if (file) {
+      const res = await uploadsAPI.uploadEvidenceFile(file);
+      return res.url;
+    }
+    return fallbackUrl || null;
+  };
+
+  const handleUploadEvidence = async () => {
+    if (!isLoggedIn) { window.location.href = "/login"; return; }
+    if (!taskId.trim()) { setApiError("Please enter a Task ID first."); return; }
+    if (!isTasker) { setApiError("Only the assigned tasker can upload evidence."); return; }
+
+    setApiError(null);
+    setUploading(true);
+    setStage("uploading");
+
+    try {
+      const before = await uploadFileIfNeeded(beforeFile, useUrls ? beforeUrl : existingEvidence?.before_image_url);
+      const after = await uploadFileIfNeeded(afterFile, useUrls ? afterUrl : existingEvidence?.after_image_url);
+      const video = await uploadFileIfNeeded(videoFile, useUrls ? videoUrl : existingEvidence?.evidence_video_url);
+
+      if (!before && !after && !video) {
+        throw new Error("Add at least one before photo, after photo, or video.");
+      }
+
+      const evData = await tasksAPI.uploadEvidence(taskId.trim(), before, after, video);
+      setEvidenceId(evData.evidence_id);
+      setExistingEvidence({
+        evidence_id: evData.evidence_id,
+        before_image_url: before,
+        after_image_url: after,
+        evidence_video_url: video,
+      });
+      if (before) setBeforeUrl(before);
+      if (after) setAfterUrl(after);
+      if (video) setVideoUrl(video);
+      setStage("input");
+    } catch (err) {
+      setApiError(err.message);
+      setStage("input");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleVerify = async () => {
     if (!isLoggedIn) { window.location.href = "/login"; return; }
     if (!taskId.trim()) { setApiError("Please enter a Task ID first."); return; }
-    setApiError(null);
-
-    // Stage 1: Upload evidence
-    setStage("uploading");
-    try {
-      const evData = await tasksAPI.uploadEvidence(
-        taskId.trim(),
-        beforeUrl || null,
-        afterUrl || null,
-        videoUrl || null
-      );
-      setEvidenceId(evData.evidence_id);
-    } catch (err) {
-      // If evidence already uploaded or not tasker, still try verify
-      if (!err.message.includes("Only assigned")) {
-        console.warn("Evidence upload note:", err.message);
-      }
+    if (!isPoster && user?.role !== "ADMIN") {
+      setApiError("Only the poster (or admin) can trigger AI verification.");
+      return;
     }
 
-    // Stage 2: Run verification
+    setApiError(null);
+    setVerifying(true);
     setStage("verifying");
+
     try {
       const verData = await tasksAPI.verify(taskId.trim());
       setResult({
@@ -60,24 +145,27 @@ export default function VerifyPage() {
     } catch (err) {
       setApiError(err.message);
       setStage("input");
+    } finally {
+      setVerifying(false);
     }
   };
 
   const reset = () => {
     setStage("input");
     setResult(null);
-    setEvidenceId(null);
     setApiError(null);
   };
 
   const colors = result ? (CONFIDENCE_COLORS[result.status] || CONFIDENCE_COLORS.FAIL) : null;
   const circumference = 2 * Math.PI * 54;
+  const sliderBefore = resolveBefore();
+  const sliderAfter = resolveAfter();
 
   return (
     <div className="verify-wrapper">
       <div className="verify-header-box">
         <h2 className="title-gradient-purple">Vision Proof Verification</h2>
-        <p>Submit before/after evidence URLs and let the AI backend compute a verified confidence score.</p>
+        <p>Taskers upload before/after photos from their device. Posters run AI verification to release escrow.</p>
       </div>
 
       {!isLoggedIn && (
@@ -87,133 +175,138 @@ export default function VerifyPage() {
         </div>
       )}
 
-      {apiError && (
-        <div className="api-error-bar">⚠ {apiError}</div>
-      )}
+      {apiError && <div className="api-error-bar">⚠ {apiError}</div>}
 
       {(stage === "uploading" || stage === "verifying") && (
         <div className="processing-card glass-card">
           <Loader style={{ width: 36, height: 36, color: "var(--color-teal)", animation: "spin 1s linear infinite" }} />
-          <h3>{stage === "uploading" ? "Uploading Evidence to Backend..." : "AI Verification in Progress..."}</h3>
+          <h3>{stage === "uploading" ? "Uploading Evidence..." : "AI Verification in Progress..."}</h3>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
             {stage === "uploading"
-              ? "Sending before/after image URLs to POST /api/tasks/{id}/evidence"
-              : "Calling POST /api/tasks/{id}/verify — AI is analyzing evidence quality..."}
+              ? "Uploading files → POST /api/tasks/{id}/evidence"
+              : "POST /api/tasks/{id}/verify — analyzing evidence quality..."}
           </p>
         </div>
       )}
 
       {stage === "input" && (
         <div className="verify-grid">
-          {/* Left: Form */}
           <div className="glass-card verify-form-card">
-            <h3 className="panel-title" style={{ borderColor: "#a78bfa" }}>Task & Evidence Input</h3>
+            <h3 className="panel-title" style={{ borderColor: "#a78bfa" }}>Task & Evidence</h3>
 
-            {/* Task ID */}
             <div className="form-row">
-              <label>Task ID (UUID from accepted task)</label>
+              <label>Task ID</label>
               <input
                 type="text"
-                placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                placeholder="UUID from accepted task"
                 value={taskId}
                 onChange={(e) => setTaskId(e.target.value)}
                 className="form-input"
               />
-              <p className="helper-text">Copy the task ID from the Tasker Radar after accepting a task.</p>
-            </div>
-
-            {/* Before URL */}
-            <div className="form-row">
-              <label>Before Image URL</label>
-              <input
-                type="url"
-                placeholder="https://..."
-                value={beforeUrl}
-                onChange={(e) => setBeforeUrl(e.target.value)}
-                className="form-input"
-              />
-              {beforeUrl && (
-                <div className="image-preview">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={beforeUrl} alt="Before" onError={(e) => { e.target.style.display = "none"; }} />
-                </div>
+              {existingEvidence && (
+                <p className="helper-text success">Evidence on file · ID <code>{existingEvidence.evidence_id?.slice(0, 8)}…</code></p>
               )}
             </div>
 
-            {/* After URL */}
-            <div className="form-row">
-              <label>After Image URL</label>
-              <input
-                type="url"
-                placeholder="https://..."
-                value={afterUrl}
-                onChange={(e) => setAfterUrl(e.target.value)}
-                className="form-input"
-              />
-              {afterUrl && (
-                <div className="image-preview">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={afterUrl} alt="After" onError={(e) => { e.target.style.display = "none"; }} />
+            <label className="url-toggle">
+              <input type="checkbox" checked={useUrls} onChange={(e) => setUseUrls(e.target.checked)} />
+              <Link2 size={14} /> Use external URLs instead of file upload
+            </label>
+
+            {useUrls ? (
+              <>
+                <div className="form-row">
+                  <label>Before Image URL</label>
+                  <input type="url" value={beforeUrl} onChange={(e) => setBeforeUrl(e.target.value)} className="form-input" />
                 </div>
+                <div className="form-row">
+                  <label>After Image URL</label>
+                  <input type="url" value={afterUrl} onChange={(e) => setAfterUrl(e.target.value)} className="form-input" />
+                </div>
+                <div className="form-row">
+                  <label>Video URL (optional)</label>
+                  <input type="url" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="form-input" />
+                </div>
+              </>
+            ) : (
+              <>
+                <EvidenceFilePicker
+                  label="Before photo"
+                  file={beforeFile}
+                  previewUrl={beforePreview || resolveMediaUrl(existingEvidence?.before_image_url)}
+                  onFileSelect={setFileWithPreview(setBeforeFile, setBeforePreview)}
+                  onClear={() => { setBeforeFile(null); setBeforePreview(""); }}
+                  disabled={!isTasker || uploading}
+                />
+                <EvidenceFilePicker
+                  label="After photo"
+                  file={afterFile}
+                  previewUrl={afterPreview || resolveMediaUrl(existingEvidence?.after_image_url)}
+                  onFileSelect={setFileWithPreview(setAfterFile, setAfterPreview)}
+                  onClear={() => { setAfterFile(null); setAfterPreview(""); }}
+                  disabled={!isTasker || uploading}
+                />
+                <EvidenceFilePicker
+                  label="Video (optional)"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  file={videoFile}
+                  previewUrl=""
+                  onFileSelect={setVideoFile}
+                  onClear={() => setVideoFile(null)}
+                  disabled={!isTasker || uploading}
+                />
+                {videoFile && <p className="helper-text">Selected: {videoFile.name}</p>}
+                {!videoFile && existingEvidence?.evidence_video_url && (
+                  <p className="helper-text success">Video on file</p>
+                )}
+              </>
+            )}
+
+            <div className="action-row">
+              {isTasker && (
+                <button onClick={handleUploadEvidence} className="btn-premium btn-teal" disabled={uploading}>
+                  <Upload style={{ width: 16, height: 16 }} />
+                  {uploading ? "Uploading..." : "Upload Evidence"}
+                </button>
+              )}
+              {(isPoster || user?.role === "ADMIN") && (
+                <button onClick={handleVerify} className="btn-premium btn-saffron" disabled={verifying || (!existingEvidence && !evidenceId)}>
+                  <ShieldCheck style={{ width: 16, height: 16 }} />
+                  {verifying ? "Verifying..." : "Run AI Verification"}
+                </button>
+              )}
+              {!isTasker && !isPoster && isLoggedIn && (
+                <p className="helper-text">Sign in as tasker to upload or poster to verify.</p>
               )}
             </div>
-
-            {/* Optional video */}
-            <div className="form-row">
-              <label>Evidence Video URL (optional)</label>
-              <input
-                type="url"
-                placeholder="https://... (optional)"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                className="form-input"
-              />
-            </div>
-
-            <button onClick={handleVerify} className="btn-premium btn-teal" style={{ width: "100%" }}>
-              <Upload style={{ width: 16, height: 16 }} />
-              Upload Evidence & Verify via API
-            </button>
           </div>
 
-          {/* Right: Slider preview */}
           <div className="glass-card slider-preview-card">
-            <h3 className="panel-title" style={{ borderColor: "#a78bfa" }}>Before / After Slider Preview</h3>
+            <h3 className="panel-title" style={{ borderColor: "#a78bfa" }}>Before / After Preview</h3>
             <div className="slider-outer">
-              <div
-                className="slider-before"
-                style={{ backgroundImage: `url(${beforeUrl})` }}
-              ></div>
+              <div className="slider-before" style={{ backgroundImage: sliderBefore ? `url(${sliderBefore})` : undefined }} />
               <div
                 className="slider-after"
                 style={{
-                  backgroundImage: `url(${afterUrl})`,
+                  backgroundImage: sliderAfter ? `url(${sliderAfter})` : undefined,
                   clipPath: `inset(0 ${100 - sliderVal}% 0 0)`,
                 }}
-              ></div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={sliderVal}
-                onChange={(e) => setSliderVal(Number(e.target.value))}
-                className="slider-handle"
               />
+              <input type="range" min="0" max="100" value={sliderVal} onChange={(e) => setSliderVal(Number(e.target.value))} className="slider-handle" />
               <div className="slider-labels">
                 <span className="label-before">BEFORE</span>
                 <span className="label-after">AFTER</span>
               </div>
             </div>
 
-            {/* Backend info box */}
             <div className="backend-info-box">
-              <h4>Backend Verification Logic</h4>
+              <h4>How it works</h4>
               <ul>
-                <li><b>PASS (92%)</b> — Both before &amp; after images provided.</li>
-                <li><b>LOW_CONFIDENCE (62%)</b> — Only after or video provided.</li>
-                <li><b>FAIL (18%)</b> — No evidence uploaded at all.</li>
+                <li><b>Tasker</b> — pick photos from device (or paste URLs in advanced mode).</li>
+                <li><b>Poster</b> — run verification after evidence is uploaded.</li>
+                <li><b>PASS</b> — both before &amp; after → escrow release eligible.</li>
+                <li><b>LOW / FAIL</b> — dispute may open; check Payments.</li>
               </ul>
-              <p>The escrow status automatically updates based on verification outcome.</p>
             </div>
           </div>
         </div>
@@ -221,7 +314,6 @@ export default function VerifyPage() {
 
       {stage === "result" && result && colors && (
         <div className="result-container">
-          {/* Score ring */}
           <div className="result-ring-box glass-card">
             <svg width="160" height="160" viewBox="0 0 120 120">
               <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
@@ -260,29 +352,28 @@ export default function VerifyPage() {
             </button>
           </div>
 
-          {/* Before/After comparison */}
           <div className="glass-card comparison-result-card">
             <h3 className="panel-title" style={{ borderColor: colors.ring }}>Evidence Comparison</h3>
             <div className="comparison-pair">
               <div className="compare-img-box">
                 <span className="compare-label">BEFORE</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={beforeUrl} alt="Before" className="compare-img" />
+                <img src={sliderBefore} alt="Before" className="compare-img" />
               </div>
               <div className="compare-arrow">→</div>
               <div className="compare-img-box">
                 <span className="compare-label" style={{ color: colors.textColor }}>AFTER</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={afterUrl} alt="After" className="compare-img" />
+                <img src={sliderAfter} alt="After" className="compare-img" />
               </div>
             </div>
 
             <div className="next-step-box">
               <h4>Next Step:</h4>
               {result.status === "PASS" ? (
-                <p>Escrow is now <b>Release Eligible</b>. Go to <a href="/payments">Payments</a> to release funds to the tasker.</p>
+                <p>Escrow is now <b>Release Eligible</b>. Go to <a href={`/payments?task_id=${taskId}`}>Payments</a> to release funds.</p>
               ) : (
-                <p>Low confidence or failed verification — dispute may have been opened on the escrow. Check <a href="/payments">Payments</a>.</p>
+                <p>Low confidence or failed — dispute may have opened. Check <a href={`/payments?task_id=${taskId}`}>Payments</a>.</p>
               )}
             </div>
           </div>
@@ -292,7 +383,7 @@ export default function VerifyPage() {
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .verify-wrapper { display: flex; flex-direction: column; gap: 40px; }
-        .verify-header-box { text-align: center; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+        .verify-header-box { text-align: center; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
         .title-gradient-purple { font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .verify-auth-warning { display: flex; align-items: center; gap: 8px; justify-content: center; background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 12px 20px; color: var(--color-saffron); font-size: 0.85rem; font-weight: 600; }
         .verify-auth-warning a { color: var(--color-teal); text-decoration: underline; }
@@ -306,10 +397,12 @@ export default function VerifyPage() {
         .form-input { background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.9rem; outline: none; transition: border 0.2s ease; }
         .form-input:focus { border-color: #a78bfa; }
         .helper-text { font-size: 0.75rem; color: var(--color-text-muted); }
-        .image-preview { max-height: 100px; overflow: hidden; border-radius: 8px; border: 1px solid var(--border-glow); }
-        .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .helper-text.success { color: var(--color-teal); }
+        .helper-text code { color: var(--color-teal); }
+        .url-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--color-text-muted); cursor: pointer; }
+        .action-row { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 8px; }
         .slider-preview-card { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
-        .slider-outer { position: relative; height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glow); background: #000; }
+        .slider-outer { position: relative; height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glow); background: #111; }
         .slider-before, .slider-after { position: absolute; inset: 0; background-size: cover; background-position: center; }
         .slider-after { transition: clip-path 0.05s ease; }
         .slider-handle { position: absolute; inset: 0; opacity: 0; cursor: ew-resize; width: 100%; z-index: 10; }
@@ -320,7 +413,6 @@ export default function VerifyPage() {
         .backend-info-box h4 { font-size: 0.85rem; font-weight: 700; color: #a78bfa; margin-bottom: 8px; }
         .backend-info-box ul { display: flex; flex-direction: column; gap: 6px; padding-left: 16px; }
         .backend-info-box li { font-size: 0.8rem; color: var(--color-text-muted); }
-        .backend-info-box p { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 8px; }
         .result-container { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 30px; }
         .result-ring-box { padding: 36px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .result-status-badge { display: flex; align-items: center; gap: 8px; padding: 8px 20px; border-radius: 20px; border-width: 1px; border-style: solid; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; }
@@ -339,5 +431,13 @@ export default function VerifyPage() {
         @media (max-width: 768px) { .verify-grid, .result-container { grid-template-columns: 1fr; } .comparison-pair { flex-direction: column; } .compare-arrow { transform: rotate(90deg); } }
       ` }} />
     </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div className="verify-wrapper"><div className="processing-card glass-card">Loading...</div></div>}>
+      <VerifyInner />
+    </Suspense>
   );
 }
