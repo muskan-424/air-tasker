@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 def test_payout_status_endpoints(client):
     poster_email = "poster_payout2@example.com"
     client.post("/api/auth/register", json={"email": poster_email, "password": "secret123", "role": "POSTER"})

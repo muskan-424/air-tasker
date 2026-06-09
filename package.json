@@ -9,6 +9,7 @@
     "dev:frontend:install": "npm install --prefix frontend_nextjs && npm run dev --prefix frontend_nextjs",
     "build:frontend": "npm run build --prefix frontend_nextjs",
     "lint:frontend": "npm run lint --prefix frontend_nextjs",
+    "test:backend": "cd backend_fastapi && python -m pytest tests/ -q --ignore=tests/integration",
     "install:frontend": "npm install --prefix frontend_nextjs",
     "dev:all": "concurrently -n api,web -c blue,green \"docker compose up --build\" \"npm run dev --prefix frontend_nextjs\""
   },
