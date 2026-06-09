@@ -12,6 +12,8 @@
     "test:backend": "cd backend_fastapi && python -m pytest tests/ -q --ignore=tests/integration",
     "test:e2e": "npm run test:e2e --prefix frontend_nextjs",
     "smoke:staging": "python scripts/smoke_deploy.py",
+    "go-live:watch": "python scripts/go_live_watch.py",
+    "rollback:drill": "python scripts/rollback_drill.py",
     "install:frontend": "npm install --prefix frontend_nextjs",
     "dev:all": "concurrently -n api,web -c blue,green \"docker compose up --build\" \"npm run dev --prefix frontend_nextjs\""
   },
