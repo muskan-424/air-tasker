@@ -47,7 +47,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("rule_code", sa.String(length=64), nullable=False),
         sa.Column("severity", sa.String(length=16), nullable=False),
-        sa.Column("details", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("details", postgresql.JSONB(), nullable=True),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("source_report_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),

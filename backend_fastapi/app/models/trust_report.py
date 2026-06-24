@@ -49,7 +49,7 @@ class UserReport(Base):
     )
     category: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), default=ReportStatus.OPEN.value, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     admin_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -71,7 +71,7 @@ class TrustFlag(Base):
     rule_code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     severity: Mapped[str] = mapped_column(String(16), nullable=False)
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    status: Mapped[str] = mapped_column(String(16), default=TrustFlagStatus.ACTIVE.value, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     source_report_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_reports.id", ondelete="SET NULL"), nullable=True
     )
