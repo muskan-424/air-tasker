@@ -23,7 +23,7 @@ feedback_category = sa.Enum(
 
 
 def upgrade() -> None:
-    feedback_category.create(op.get_bind(), checkfirst=True)
+    # Let create_table create the enum once (explicit .create() duplicates it in the same txn).
     op.create_table(
         "beta_feedback",
         sa.Column("id", sa.UUID(), nullable=False),

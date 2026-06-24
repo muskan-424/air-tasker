@@ -38,12 +38,12 @@ def upgrade() -> None:
         sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("rejected_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("rejection_reason", sa.String(length=500), nullable=True),
-        sa.Column("metadata_json", JSONB(), nullable=True),
-        sa.UniqueConstraint("user_id", name="uq_user_kyc_profiles_user_id"),
+        sa.Column("metadata", JSONB(), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_user_kyc_profiles_status", "user_kyc_profiles", ["status"], unique=False)
+    op.create_index("ix_user_kyc_profiles_user_id", "user_kyc_profiles", ["user_id"], unique=True)
 
 
 def downgrade() -> None:
-    op.drop_index("ix_user_kyc_profiles_status", table_name="user_kyc_profiles")
+    op.drop_index("ix_user_kyc_profiles_user_id", table_name="user_kyc_profiles")
     op.drop_table("user_kyc_profiles")
