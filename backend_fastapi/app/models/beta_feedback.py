@@ -25,7 +25,11 @@ class BetaFeedback(Base):
     )
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     category: Mapped[BetaFeedbackCategory] = mapped_column(
-        Enum(BetaFeedbackCategory, name="beta_feedback_category"),
+        Enum(
+            BetaFeedbackCategory,
+            name="beta_feedback_category",
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
         nullable=False,
         default=BetaFeedbackCategory.OTHER,
     )

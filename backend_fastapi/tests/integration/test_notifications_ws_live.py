@@ -35,7 +35,7 @@ def test_notifications_ws_receives_task_published_event(client, integration_env)
         draft = client.post(
             "/api/tasks/drafts",
             json={
-                "raw_input": "Need plumbing fix in Indore today, budget 1500 INR",
+                "raw_input": "Need plumbing fix in Indore PIN 110001 today, budget 1500 INR",
                 "language": "en",
             },
             headers=_auth_headers(token),
@@ -48,7 +48,8 @@ def test_notifications_ws_receives_task_published_event(client, integration_env)
 
         msg = ws.receive_json()
         assert msg["type"] == "notification"
-        assert msg["title"] == "Task published"
-        assert "task_id" in (msg.get("body") or "")
-        assert msg["category"] == "TASK"
-        assert msg["delivery_status"] == "delivered"
+        data = msg["data"]
+        assert data["title"] == "Task published"
+        assert "task_id" in (data.get("body") or "")
+        assert data["category"] == "TASK"
+        assert data["delivery_status"] == "delivered"

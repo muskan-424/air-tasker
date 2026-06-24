@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 pytestmark = pytest.mark.integration
@@ -25,7 +27,7 @@ def test_beta_kpis_requires_admin(client, integration_env):
     denied = client.get("/api/beta/kpis")
     assert denied.status_code == 401
 
-    email = "beta_admin_kpi@example.com"
+    email = f"beta_admin_kpi_{uuid.uuid4().hex[:10]}@example.com"
     client.post(
         "/api/auth/register",
         json={"email": email, "password": "TestPass123!", "role": "ADMIN"},

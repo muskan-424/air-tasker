@@ -26,9 +26,15 @@ def upgrade() -> None:
         sa.Column("event_type", sa.String(length=120), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("razorpay_event_id", name="uq_razorpay_webhook_events_event_id"),
+    )
+    op.create_index(
+        "ix_razorpay_webhook_events_razorpay_event_id",
+        "razorpay_webhook_events",
+        ["razorpay_event_id"],
+        unique=True,
     )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_razorpay_webhook_events_razorpay_event_id", table_name="razorpay_webhook_events")
     op.drop_table("razorpay_webhook_events")

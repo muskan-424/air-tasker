@@ -94,6 +94,14 @@ class Settings(BaseSettings):
     feature_flag_razorpay_checkout: bool = True
     feature_flag_disputes: bool = True
 
+    # Trust / fraud heuristics (Phase W)
+    trust_cancel_window_days: int = 7
+    trust_cancel_threshold: int = 3
+    trust_evidence_fail_window_days: int = 30
+    trust_evidence_fail_threshold: int = 2
+    trust_new_account_days: int = 7
+    trust_new_account_max_tasks_per_day: int = 8
+
     # Local evidence file uploads (MVP before S3 presign)
     evidence_upload_dir: str = "uploads/evidence"
     evidence_max_file_bytes: int = 10 * 1024 * 1024  # 10 MB

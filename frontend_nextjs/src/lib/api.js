@@ -166,6 +166,31 @@ export const tasksAPI = {
     }),
 };
 
+// ─── Reports & trust ─────────────────────────────────────────────────────────
+
+export const reportsAPI = {
+  create: ({ reportedUserId, taskId, category, reason }) =>
+    apiFetch("/api/reports", {
+      method: "POST",
+      body: JSON.stringify({
+        reported_user_id: reportedUserId || null,
+        task_id: taskId || null,
+        category: category || "other",
+        reason,
+      }),
+    }),
+
+  listOpen: () => apiFetch("/api/reports/open"),
+
+  resolve: (reportId, outcome, adminNotes = null) =>
+    apiFetch(`/api/reports/${reportId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ outcome, admin_notes: adminNotes }),
+    }),
+
+  listTrustFlags: () => apiFetch("/api/reports/trust-flags/active"),
+};
+
 // ─── Payments ────────────────────────────────────────────────────────────────
 
 export const paymentsAPI = {

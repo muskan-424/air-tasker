@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Gavel, Loader, Shield, XCircle } from "lucide-react";
+import { CheckCircle2, Flag, Gavel, Loader, Shield, XCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { accountAPI, kycAPI, tasksAPI } from "@/lib/api";
+import { accountAPI, kycAPI, reportsAPI, tasksAPI } from "@/lib/api";
 
 const ADMIN_ROLES = new Set(["ADMIN", "REVIEWER"]);
 
@@ -15,6 +15,8 @@ export default function AdminPage() {
   const [disputes, setDisputes] = useState([]);
   const [kycQueue, setKycQueue] = useState([]);
   const [verifications, setVerifications] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [trustFlags, setTrustFlags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(null);
   const [error, setError] = useState(null);
@@ -32,14 +34,18 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const [d, k, v] = await Promise.all([
+      const [d, k, v, r, f] = await Promise.all([
         tasksAPI.listOpenDisputes(),
         kycAPI.listPending(),
         tasksAPI.listReviewVerifications(),
+        reportsAPI.listOpen(),
+        reportsAPI.listTrustFlags(),
       ]);
       setDisputes(d || []);
       setKycQueue(k || []);
       setVerifications(v || []);
+      setReports(r || []);
+      setTrustFlags(f || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -79,6 +85,20 @@ export default function AdminPage() {
     }
   };
 
+  const resolveReport = async (reportId, outcome) => {
+    setActing(reportId + outcome);
+    setError(null);
+    try {
+      await reportsAPI.resolve(reportId, outcome, `Admin ${outcome} via dashboard`);
+      setSuccess(`Report ${outcome}`);
+      await loadQueues();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActing(null);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <main className="page-shell">
@@ -101,7 +121,7 @@ export default function AdminPage() {
     <main className="page-shell">
       <header>
         <h1><Shield size={26} /> Admin Dashboard</h1>
-        <p>Resolve disputes, review KYC, and triage low-confidence verifications.</p>
+        <p>Resolve disputes, review KYC, triage verifications, user reports, and trust flags.</p>
       </header>
 
       {error && <div className="banner err">{error}</div>}
@@ -112,6 +132,8 @@ export default function AdminPage() {
           ["disputes", `Disputes (${disputes.length})`],
           ["kyc", `KYC (${kycQueue.length})`],
           ["verify", `Review (${verifications.length})`],
+          ["reports", `Reports (${reports.length})`],
+          ["flags", `Trust (${trustFlags.length})`],
         ].map(([key, label]) => (
           <button key={key} type="button" className={tab === key ? "active" : ""} onClick={() => setTab(key)}>
             {label}
@@ -160,7 +182,7 @@ export default function AdminPage() {
             </article>
           ))}
         </div>
-      ) : (
+      ) : tab === "verify" ? (
         <div className="glass-card queue">
           {verifications.length === 0 ? <p className="muted">No verifications needing review.</p> : verifications.map((v) => (
             <article key={v.verification_id} className="item">
@@ -174,6 +196,45 @@ export default function AdminPage() {
                 <Link href={`/verify?task_id=${v.task_id}`} className="link">View evidence</Link>
                 <Link href={`/disputes?task_id=${v.task_id}`} className="link">Open dispute</Link>
               </div>
+            </article>
+          ))}
+        </div>
+      ) : tab === "reports" ? (
+        <div className="glass-card queue">
+          {reports.length === 0 ? <p className="muted">No open user reports.</p> : reports.map((r) => (
+            <article key={r.report_id} className="item">
+              <div className="top">
+                <Flag size={16} />
+                <span className={`badge ${r.category}`}>{r.category}</span>
+                <time>{new Date(r.created_at).toLocaleString()}</time>
+              </div>
+              <p className="meta">
+                {r.task_id && <>Task <code>{r.task_id.slice(0, 8)}…</code> · </>}
+                {r.reported_user_id && <>User <code>{r.reported_user_id.slice(0, 8)}…</code></>}
+              </p>
+              <p>{r.reason}</p>
+              <div className="actions">
+                <button type="button" className="btn-premium btn-teal" disabled={!!acting} onClick={() => resolveReport(r.report_id, "reviewed")}>
+                  Mark reviewed
+                </button>
+                <button type="button" className="btn-premium btn-outline" disabled={!!acting} onClick={() => resolveReport(r.report_id, "dismissed")}>
+                  Dismiss
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="glass-card queue">
+          {trustFlags.length === 0 ? <p className="muted">No active trust flags.</p> : trustFlags.map((f) => (
+            <article key={f.flag_id} className="item">
+              <div className="top">
+                <span className={`badge ${f.severity.toLowerCase()}`}>{f.rule_code}</span>
+                <span>{f.severity}</span>
+                <time>{new Date(f.created_at).toLocaleString()}</time>
+              </div>
+              <p className="meta">User <code>{f.user_id.slice(0, 8)}…</code></p>
+              {f.details && <p className="meta">{JSON.stringify(f.details)}</p>}
             </article>
           ))}
         </div>

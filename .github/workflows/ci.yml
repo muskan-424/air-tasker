@@ -37,6 +37,7 @@ jobs:
       RAG_REINDEX_INTERVAL_HOURS: "0"
       USE_PINECONE_RAG: "false"
       RAZORPAY_WEBHOOK_EVENTS_CLEANUP_INTERVAL_HOURS: "0"
+      USE_MOCK_CHATBOT: "true"
     defaults:
       run:
         working-directory: backend_fastapi
@@ -88,6 +89,7 @@ jobs:
       RAG_REINDEX_INTERVAL_HOURS: "0"
       USE_PINECONE_RAG: "false"
       RAZORPAY_WEBHOOK_EVENTS_CLEANUP_INTERVAL_HOURS: "0"
+      USE_MOCK_CHATBOT: "true"
     defaults:
       run:
         working-directory: backend_fastapi

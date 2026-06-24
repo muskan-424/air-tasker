@@ -97,7 +97,7 @@ def run_smoke(base_url: str) -> None:
         "POST",
         f"{base}/api/tasks/drafts",
         headers={"Authorization": f"Bearer {token}"},
-        body={"raw_input": "Smoke test AC repair Dehradun PIN 248001", "language": "en"},
+        body={"raw_input": "Smoke test electrical wiring repair Dehradun PIN 248001", "language": "en"},
     )
     if not draft.get("id"):
         raise SmokeError("draft missing id")
