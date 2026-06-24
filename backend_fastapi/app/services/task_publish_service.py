@@ -43,6 +43,9 @@ async def publish_draft_to_task(db: AsyncSession, user: User, draft_id: uuid.UUI
         raise PublishDraftError("conflict", "Draft already published")
 
     ai_schema = draft.user_edits or draft.ai_schema
+    from app.services.beta_service import validate_draft_for_beta
+
+    validate_draft_for_beta(ai_schema)
     category = str(ai_schema.get("category", "general"))
     subcategory = ai_schema.get("subcategory")
     min_price, max_price = _extract_price_range(ai_schema)

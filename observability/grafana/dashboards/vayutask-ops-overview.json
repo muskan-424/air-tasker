@@ -1,0 +1,113 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "VayuTask AI ops dashboard. Alert starting points from README: 5xx > 5% for 5m; notification/payment retry failures rising 10m.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "HTTP request rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(vayutask_http_requests_total[5m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "title": "HTTP 5xx rate (alert if > 5% of traffic for 5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(vayutask_http_responses_5xx_total[5m]))",
+          "legendFormat": "5xx/s"
+        }
+      ]
+    },
+    {
+      "title": "p95 latency (seconds)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(vayutask_http_request_duration_seconds_bucket[5m])) by (le, method))",
+          "legendFormat": "{{method}} p95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "Job queue depth",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "vayutask_job_queue_depth", "legendFormat": "pending jobs" }
+      ]
+    },
+    {
+      "title": "Razorpay webhooks & orders",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(vayutask_razorpay_webhook_payment_captured_total[5m])", "legendFormat": "payment captured" },
+        { "expr": "rate(vayutask_razorpay_orders_created_total[5m])", "legendFormat": "orders created" },
+        { "expr": "rate(vayutask_razorpay_refunds_total[5m])", "legendFormat": "refunds" }
+      ]
+    },
+    {
+      "title": "Notifications delivery",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(vayutask_notifications_email_delivered_total[5m])", "legendFormat": "email delivered" },
+        { "expr": "rate(vayutask_notifications_email_failed_total[5m])", "legendFormat": "email failed" },
+        { "expr": "rate(vayutask_notifications_retry_failed_total[5m])", "legendFormat": "retry failed" }
+      ]
+    },
+    {
+      "title": "KYC submissions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(vayutask_kyc_submissions_total[5m])", "legendFormat": "submissions" },
+        { "expr": "rate(vayutask_kyc_verified_total[5m])", "legendFormat": "verified" },
+        { "expr": "rate(vayutask_kyc_rejected_total[5m])", "legendFormat": "rejected" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["vayutask", "observability"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "VayuTask AI — Ops Overview",
+  "uid": "vayutask-ops-overview",
+  "version": 1
+}

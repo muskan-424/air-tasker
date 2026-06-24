@@ -1,3 +1,12 @@
+# Staging stack overlay — use with base compose:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build -d
+#
+# Optional Redis cache profile:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile cache up --build -d
+#
+# Post-deploy smoke:
+#   python scripts/smoke_deploy.py http://localhost:4000
+
 services:
   api:
     env_file: []
@@ -5,8 +14,18 @@ services:
       ENVIRONMENT: staging
       PORT: "4000"
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/airtasker}
-      SECRET_KEY: ${SECRET_KEY:-staging-change-me}
-      USE_MOCK_CHATBOT: "false"
+      SECRET_KEY: ${SECRET_KEY:-staging-change-me-use-long-random-string}
+      USE_MOCK_CHATBOT: ${USE_MOCK_CHATBOT:-true}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      USE_PINECONE_RAG: ${USE_PINECONE_RAG:-false}
       KYC_REQUIRED_FOR_PAYOUT: ${KYC_REQUIRED_FOR_PAYOUT:-true}
+      KYC_STUB_AUTO_VERIFY: ${KYC_STUB_AUTO_VERIFY:-true}
       REDIS_URL: ${REDIS_URL:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      ENABLE_PROMETHEUS_METRICS: ${ENABLE_PROMETHEUS_METRICS:-true}
+      NOTIFICATION_RETRY_INTERVAL_SECONDS: ${NOTIFICATION_RETRY_INTERVAL_SECONDS:-0}
+      RAG_REINDEX_INTERVAL_HOURS: ${RAG_REINDEX_INTERVAL_HOURS:-0}
     restart: unless-stopped

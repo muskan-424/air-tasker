@@ -114,12 +114,15 @@ export const tasksAPI = {
 
   get: (taskId) => apiFetch(`/api/tasks/${taskId}`),
 
-  accept: (taskId, acknowledgement = "I acknowledge the requirements.") =>
+  accept: (taskId, acknowledgement = { confirmed: true }) =>
     apiFetch(`/api/tasks/${taskId}/accept`, {
       method: "POST",
       body: JSON.stringify({
         acknowledge_requirements: true,
-        acknowledgement,
+        acknowledgement:
+          typeof acknowledgement === "object" && acknowledgement !== null
+            ? acknowledgement
+            : { note: String(acknowledgement) },
       }),
     }),
 
@@ -357,4 +360,16 @@ export const notificationsAPI = {
 export const healthAPI = {
   check: () => apiFetch("/api/health"),
   capabilities: () => apiFetch("/api/health/capabilities"),
+};
+
+// ─── Closed beta ─────────────────────────────────────────────────────────────
+
+export const betaAPI = {
+  getConfig: () => apiFetch("/api/beta/config"),
+  submitFeedback: (payload) =>
+    apiFetch("/api/beta/feedback", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getKpis: () => apiFetch("/api/beta/kpis"),
 };

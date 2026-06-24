@@ -1,0 +1,228 @@
+# CI for VayuTask AI — backend tests + frontend lint/build on every PR to main.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest + alembic)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: airtasker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d airtasker_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/airtasker_test
+      SECRET_KEY: ci-test-secret-do-not-use-in-production
+      NOTIFICATION_RETRY_INTERVAL_SECONDS: "0"
+      RAG_REINDEX_INTERVAL_HOURS: "0"
+      USE_PINECONE_RAG: "false"
+      RAZORPAY_WEBHOOK_EVENTS_CLEANUP_INTERVAL_HOURS: "0"
+    defaults:
+      run:
+        working-directory: backend_fastapi
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend_fastapi/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Alembic upgrade
+        run: python -m alembic upgrade head
+
+      - name: Alembic check (models match migrations)
+        run: python -m alembic check
+
+      - name: Pytest (unit; integration excluded)
+        run: python -m pytest tests/ -q --ignore=tests/integration
+
+  backend-integration:
+    name: Backend integration (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: airtasker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d airtasker_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/airtasker_test
+      SECRET_KEY: ci-test-secret-do-not-use-in-production
+      RUN_INTEGRATION_TESTS: "1"
+      NOTIFICATION_RETRY_INTERVAL_SECONDS: "0"
+      RAG_REINDEX_INTERVAL_HOURS: "0"
+      USE_PINECONE_RAG: "false"
+      RAZORPAY_WEBHOOK_EVENTS_CLEANUP_INTERVAL_HOURS: "0"
+    defaults:
+      run:
+        working-directory: backend_fastapi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend_fastapi/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: python -m alembic upgrade head
+      - run: python -m pytest tests/integration -q -m integration
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_nextjs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend_nextjs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_REWRITE_TARGET: http://localhost:4000
+
+  secret-scan:
+    name: Block committed secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject tracked .env files
+        run: |
+          forbidden=$(git ls-files | grep -E '(^|/)\.env$' | grep -v '\.env\.example' | grep -v '\.env\.local\.example' | grep -v '\.env\.docker\.example' || true)
+          if [ -n "$forbidden" ]; then
+            echo "ERROR: .env files must not be committed:"
+            echo "$forbidden"
+            exit 1
+          fi
+          echo "No secret .env files in git index."
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: airtasker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d airtasker_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CI: true
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/airtasker_test
+      SECRET_KEY: ci-test-secret-do-not-use-in-production
+    defaults:
+      run:
+        working-directory: frontend_nextjs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend_fastapi/requirements.txt
+
+      - run: pip install -r ../backend_fastapi/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend_nextjs/package-lock.json
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:ci
+        env:
+          NEXT_PUBLIC_API_REWRITE_TARGET: http://localhost:4000
+
+  smoke-staging:
+    name: Staging smoke (docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start staging stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build -d
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4000/api/health >/dev/null; then
+              echo "API healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "API failed to become healthy"
+          docker compose logs api --tail 100
+          exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run post-deploy smoke
+        run: python scripts/smoke_deploy.py http://localhost:4000
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.staging.yml down -v

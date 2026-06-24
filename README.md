@@ -181,6 +181,8 @@ Suggested alert thresholds (starting point):
 - DB container restart > 3 times in 10 minutes.
 - Notification/payment retry failures increasing continuously for 10 minutes.
 
+Grafana + Prometheus (Phase V): see [observability/README.md](observability/README.md). Dashboard panels map to the thresholds above.
+
 First response checklist:
 - Confirm service state: `docker compose ps`.
 - Check API logs: `docker compose logs api --tail 200`.
@@ -207,6 +209,15 @@ Deploy command (prod overlay):
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
+Staging overlay (demos / QA):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build -d
+python scripts/smoke_deploy.py http://localhost:4000
+```
+
+See [staging/README.md](staging/README.md) for CORS, HTTPS nginx example, and cloud deploy notes.
+
 Post-deploy readiness checks:
 - Service status: `docker compose ps`
 - API health: `curl http://localhost:4000/api/health`
@@ -218,6 +229,13 @@ Critical smoke tests (minimum):
 - Auth path: login/register endpoint responds successfully.
 - Core task path: list/create task path works.
 - Payments/KYC path: one representative protected endpoint returns expected auth/policy behavior.
+
+Automated smoke (runs the checks above):
+
+```bash
+npm run smoke:staging
+# or: python scripts/smoke_deploy.py https://your-staging-api.example.com
+```
 
 Rollback trigger criteria:
 - API stays unhealthy for > 5 minutes post deploy.
@@ -291,30 +309,38 @@ Shift-close checklist:
 
 ### Final release checklist and go-live signoff
 
+Full **Phase Z** kit: [launch/README.md](launch/README.md) (signoff template, change freeze comms, 60-minute watch, rollback drill).
+
+Production env template: [.env.production.example](.env.production.example)
+
 Go-live readiness checklist:
 - All required env vars/secrets set for target environment.
 - Latest migrations applied and verified (`alembic current` at expected head).
 - Health checks green and no sustained 5xx spikes.
 - Critical smoke tests pass (auth, tasks, payments/KYC policy paths).
 - Backup for current release window exists and restore path is validated.
+- Staging rollback drill completed ([launch/ROLLBACK_DRILL.md](launch/ROLLBACK_DRILL.md)).
+
+Automated commands:
+
+```bash
+npm run smoke:staging -- --base-url https://api.yourdomain.com
+npm run go-live:watch -- --base-url https://api.yourdomain.com --minutes 60
+npm run rollback:drill -- --base-url http://localhost:4000
+```
 
 Change freeze and communication:
 - Define release window and temporary change freeze scope.
 - Share rollout plan, owner, and rollback owner in advance.
 - Notify support/stakeholders about expected impact window.
+- Templates: [launch/CHANGE_FREEZE_COMMS.md](launch/CHANGE_FREEZE_COMMS.md)
 
 Go-live signoff template:
-- Release version/tag:
-- Environment:
-- Release owner:
-- Start time / End time:
-- Migration status:
-- Smoke test result summary:
-- Open risks (if any):
-- Rollback decision (Not needed / Triggered):
-- Final signoff by:
+- Use [launch/GO_LIVE_SIGNOFF.md](launch/GO_LIVE_SIGNOFF.md) (release owner, rollback owner, migration status, signoff table).
 
 Post go-live (first 60 minutes):
-- Watch error rate, latency, restart count, and queue failures.
+- Run `npm run go-live:watch` — see [launch/FIRST_60_MINUTES.md](launch/FIRST_60_MINUTES.md).
+- Watch error rate, latency, restart count, and queue failures on Grafana.
 - Validate one real user-critical flow end-to-end.
-- Confirm no abnormal alerts remain open.
+- Confirm no abnormal alerts remain open at T+60m.
+- **DoD:** Signed signoff doc; production healthy 24h; rollback path proven on staging.

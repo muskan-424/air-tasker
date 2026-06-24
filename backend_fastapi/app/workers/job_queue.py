@@ -24,6 +24,10 @@ async def enqueue(kind: str, payload: dict[str, Any]) -> None:
     await queue.put((kind, payload))
 
 
+def queue_depth() -> int:
+    return queue.qsize()
+
+
 async def worker_loop(stop: asyncio.Event) -> None:
     while not stop.is_set():
         try:

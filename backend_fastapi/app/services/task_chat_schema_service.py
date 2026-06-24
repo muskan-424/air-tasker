@@ -58,4 +58,8 @@ def resolve_ai_schema(text: str, language: str | None = None) -> tuple[dict, str
         provider = "rule"
     if language:
         schema["language"] = language
+    if provider == "gemini":
+        from app.services.beta_service import record_gemini_call
+
+        record_gemini_call()
     return schema, provider

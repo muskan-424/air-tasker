@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from app.api.routes.admin_jobs import router as admin_jobs_router
 from app.api.routes.admin_rag import router as admin_rag_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.beta import router as beta_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
 from app.api.routes.kyc import router as kyc_router
@@ -131,13 +132,14 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(health_router)
+app.include_router(beta_router)
 app.include_router(auth_router)
 app.include_router(verification_router)
 app.include_router(kyc_router)
@@ -154,6 +156,14 @@ app.include_router(task_drafts_router)
 app.include_router(tasks_router)
 app.include_router(users_router)
 app.include_router(uploads_router)
+
+
+@app.get("/metrics")
+async def prometheus_metrics_root():
+    """Standard Prometheus scrape path (same payload as /api/metrics/prometheus)."""
+    from app.api.routes.metrics import metrics_prometheus
+
+    return await metrics_prometheus()
 
 
 @app.get("/")

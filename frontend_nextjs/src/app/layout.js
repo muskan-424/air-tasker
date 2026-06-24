@@ -1,6 +1,8 @@
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { BetaProvider } from "@/context/BetaContext";
 import NavBar from "@/components/NavBar";
+import BetaBanner from "@/components/BetaBanner";
 import EnvGuard from "@/components/EnvGuard";
 
 export const metadata = {
@@ -17,12 +19,15 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <AuthProvider>
-          <EnvGuard />
-          <NavBar />
-          <main className="main-wrapper">{children}</main>
+          <BetaProvider>
+            <EnvGuard />
+            <NavBar />
+            <BetaBanner />
+            <main className="main-wrapper">{children}</main>
           <footer className="footer-bar">
             <p>© 2026 VayuTask AI India. Built with Gemini &amp; FastAPI.</p>
           </footer>
+          </BetaProvider>
         </AuthProvider>
 
         <style dangerouslySetInnerHTML={{ __html: `
