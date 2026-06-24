@@ -7,6 +7,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "l4m5n6o7p8q9"
 down_revision: Union[str, Sequence[str], None] = "k3l4m5n6o7p8"
@@ -23,7 +24,7 @@ def upgrade() -> None:
         sa.Column("task_id", sa.UUID(), nullable=True),
         sa.Column("category", sa.String(length=32), nullable=False),
         sa.Column("reason", sa.Text(), nullable=False),
-        sa.Column("status", sa.String(length=32), nullable=False, server_default="OPEN"),
+        sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("admin_notes", sa.Text(), nullable=True),
         sa.Column("reviewed_by_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
@@ -46,8 +47,8 @@ def upgrade() -> None:
         sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("rule_code", sa.String(length=64), nullable=False),
         sa.Column("severity", sa.String(length=16), nullable=False),
-        sa.Column("details", sa.dialects.postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column("status", sa.String(length=16), nullable=False, server_default="ACTIVE"),
+        sa.Column("details", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("source_report_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),

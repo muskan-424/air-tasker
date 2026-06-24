@@ -75,9 +75,6 @@ async def create_report(
     await db.flush()
 
     new_flags = await evaluate_report_targets(db, report)
-    await db.commit()
-    await db.refresh(report)
-
     await write_audit(
         db,
         user_id=current_user.id,
@@ -88,6 +85,7 @@ async def create_report(
         user_agent=get_user_agent(request),
         meta={"category": payload.category, "task_id": str(task_uuid) if task_uuid else None},
     )
+    await db.refresh(report)
 
     return ReportCreateResponse(
         report_id=str(report.id),
