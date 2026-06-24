@@ -73,7 +73,7 @@ test.describe("Marketplace happy path", () => {
 
     const textarea = page.locator("textarea.input-textarea");
     await textarea.fill(
-      "E2E UI draft: fix ceiling fan in Dehradun PIN 248001, budget 800 INR"
+      "E2E UI draft: electrical wiring repair in Dehradun PIN 248001, budget 800 INR"
     );
     await expect(page.getByRole("button", { name: /Generate Task Draft via API/i })).toBeEnabled();
     await page.getByRole("button", { name: /Generate Task Draft via API/i }).click();

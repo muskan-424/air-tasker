@@ -47,7 +47,7 @@ export async function createPublishedTask(request, posterToken, rawInput) {
     data: {
       raw_input:
         rawInput ||
-        "E2E test: AC repair in Dehradun PIN 248001, quick turnaround, budget up to 2000 INR",
+        "E2E test: electrical wiring repair in Dehradun PIN 248001, quick turnaround, budget up to 2000 INR",
       language: "en",
     },
   });
