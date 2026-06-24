@@ -297,6 +297,7 @@ function PaymentsInner() {
               <li>Requires <code>RAZORPAY_KEY_ID</code> &amp; <code>RAZORPAY_KEY_SECRET</code> in <code>backend_fastapi/.env</code>.</li>
               <li>Use Razorpay <b>test keys</b> in development; webhook confirms capture on the server.</li>
               <li>Payout to tasker uses <b>RazorpayX Payouts API</b> after escrow release.</li>
+              <li>If verification fails, open a <a href={taskId ? `/disputes?task_id=${taskId}` : "/disputes"}>dispute</a> — admins resolve on the <a href="/admin">dashboard</a>.</li>
             </ul>
           </div>
         </div>

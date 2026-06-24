@@ -97,3 +97,21 @@ class DisputeResolveResponse(BaseModel):
     status: str
     escrow_status: str | None = None
 
+
+class DisputeListItem(BaseModel):
+    dispute_id: str
+    task_id: str
+    opened_by_id: str
+    status: str
+    reason: str | None = None
+    created_at: str
+
+
+class VerificationReviewItem(BaseModel):
+    verification_id: str
+    task_id: str
+    status: str
+    confidence: float
+    explanation: str | None = None
+    created_at: str
+

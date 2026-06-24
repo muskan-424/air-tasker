@@ -15,7 +15,7 @@ import {
   LogOut, Bell, CheckCheck, Zap, MessageSquare,
   ShieldCheck, CreditCard, Radio, PenLine, Menu, X,
   Search, ChevronDown, Sparkles, User, Settings,
-  Keyboard, CornerDownLeft, Activity, Info, LayoutDashboard
+  Keyboard, CornerDownLeft, Activity, Info, LayoutDashboard, Gavel, Shield
 } from "lucide-react";
 
 const NAV_LINKS = [
@@ -28,6 +28,7 @@ const NAV_LINKS = [
   { href: "/notifications", label: "Alerts",     icon: Bell },
   { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
   { href: "/payments", label: "Payments",        icon: CreditCard },
+  { href: "/disputes", label: "Disputes",       icon: Gavel },
   { href: "/feedback", label: "Feedback",        icon: MessageSquare },
 ];
 
@@ -581,6 +582,12 @@ export default function NavBar() {
                       <ShieldCheck style={{ width: 14, height: 14 }} />
                       Account & Email OTP
                     </a>
+                    {(user?.role === "ADMIN" || user?.role === "REVIEWER") && (
+                      <a href="/admin" className="vt-dropdown-item">
+                        <Shield style={{ width: 14, height: 14 }} />
+                        Admin Dashboard
+                      </a>
+                    )}
                     <a href="/notifications" className="vt-dropdown-item">
                       <Bell style={{ width: 14, height: 14 }} />
                       Notifications
