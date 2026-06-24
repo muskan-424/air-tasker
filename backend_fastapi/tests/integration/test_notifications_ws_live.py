@@ -48,7 +48,8 @@ def test_notifications_ws_receives_task_published_event(client, integration_env)
 
         msg = ws.receive_json()
         assert msg["type"] == "notification"
-        assert msg["title"] == "Task published"
-        assert "task_id" in (msg.get("body") or "")
-        assert msg["category"] == "TASK"
-        assert msg["delivery_status"] == "delivered"
+        data = msg["data"]
+        assert data["title"] == "Task published"
+        assert "task_id" in (data.get("body") or "")
+        assert data["category"] == "TASK"
+        assert data["delivery_status"] == "delivered"
