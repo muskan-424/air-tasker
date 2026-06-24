@@ -35,7 +35,7 @@ def test_notifications_ws_receives_task_published_event(client, integration_env)
         draft = client.post(
             "/api/tasks/drafts",
             json={
-                "raw_input": "Need plumbing fix in Indore today, budget 1500 INR",
+                "raw_input": "Need plumbing fix in Indore PIN 110001 today, budget 1500 INR",
                 "language": "en",
             },
             headers=_auth_headers(token),

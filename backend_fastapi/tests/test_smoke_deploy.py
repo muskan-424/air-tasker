@@ -24,7 +24,7 @@ def test_smoke_task_flow_via_test_client(client):
 
     draft = client.post(
         "/api/tasks/drafts",
-        json={"raw_input": "Unit smoke task PIN 248001", "language": "en"},
+        json={"raw_input": "Unit smoke electrical repair PIN 110001", "language": "en"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert draft.status_code == 200

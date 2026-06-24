@@ -26,7 +26,7 @@ def _auth_headers(token: str) -> dict[str, str]:
 def _create_and_publish_task(client, poster_token: str) -> str:
     draft = client.post(
         "/api/tasks/drafts",
-        json={"raw_input": "Need AC repair in Dehradun with quick turnaround, budget up to 2000 INR", "language": "en"},
+        json={"raw_input": "Need electrical repair in Dehradun PIN 110001 with quick turnaround, budget up to 2000 INR", "language": "en"},
         headers=_auth_headers(poster_token),
     )
     assert draft.status_code == 200, draft.text
