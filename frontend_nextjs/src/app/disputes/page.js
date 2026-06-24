@@ -5,7 +5,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, Gavel, Loader, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { tasksAPI } from "@/lib/api";
+import { reportsAPI, tasksAPI } from "@/lib/api";
+
+const REPORT_CATEGORIES = [
+  { value: "fraud", label: "Fraud / scam" },
+  { value: "harassment", label: "Harassment" },
+  { value: "spam", label: "Spam" },
+  { value: "safety", label: "Safety concern" },
+  { value: "other", label: "Other" },
+];
 
 function DisputesInner() {
   const { isLoggedIn } = useAuth();
@@ -19,6 +27,10 @@ function DisputesInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  const [reportCategory, setReportCategory] = useState("fraud");
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
     if (urlTaskId) setTaskId(urlTaskId);
@@ -56,6 +68,38 @@ function DisputesInner() {
       setError(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReport = async (e) => {
+    e.preventDefault();
+    if (!isLoggedIn) { window.location.href = "/login"; return; }
+    if (!taskId.trim() && !reportReason.trim()) {
+      setError("Enter a task ID or detailed report reason.");
+      return;
+    }
+    if (reportReason.trim().length < 10) {
+      setError("Report reason must be at least 10 characters.");
+      return;
+    }
+    setReportSubmitting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const data = await reportsAPI.create({
+        taskId: taskId.trim() || null,
+        category: reportCategory,
+        reason: reportReason.trim(),
+      });
+      const flags = data.trust_flags_raised?.length
+        ? ` · Trust review: ${data.trust_flags_raised.join(", ")}`
+        : "";
+      setSuccess(`Report submitted · ID ${data.report_id.slice(0, 8)}…${flags}`);
+      setReportReason("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -98,6 +142,31 @@ function DisputesInner() {
         <p className="hint">Poster or assigned tasker can open a dispute. Admins resolve on the <Link href="/admin">Admin dashboard</Link>.</p>
       </form>
 
+      <form onSubmit={handleReport} className="glass-card form-card report-card">
+        <h2>Report user or task</h2>
+        <p className="hint">Use for fraud, harassment, or safety issues. Ops reviews reports in Admin → Reports.</p>
+        <label>
+          Category
+          <select value={reportCategory} onChange={(e) => setReportCategory(e.target.value)}>
+            {REPORT_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Details (required, min 10 chars)
+          <textarea
+            rows={3}
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            placeholder="Describe what happened — include dates, messages, or payment requests outside escrow…"
+          />
+        </label>
+        <button type="submit" className="btn-premium btn-outline" disabled={reportSubmitting}>
+          {reportSubmitting ? "Submitting…" : "Submit report"}
+        </button>
+      </form>
+
       <div className="glass-card list-card">
         <h2>Dispute history</h2>
         {loading ? (
@@ -133,6 +202,11 @@ function DisputesInner() {
         .banner.err { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
         .banner.ok { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
         .form-card, .list-card { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+        .report-card h2 { font-size: 1rem; font-weight: 700; }
+        select {
+          background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px;
+          padding: 11px 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.9rem;
+        }
         label { display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); }
         input, textarea {
           background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px;

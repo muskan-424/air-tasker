@@ -18,6 +18,7 @@ from app.api.routes.kyc_webhooks import router as kyc_webhooks_router
 from app.api.routes.metrics import router as metrics_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.payments import router as payments_router
+from app.api.routes.reports import router as reports_router
 from app.api.routes.task_drafts import router as task_drafts_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.uploads import router as uploads_router
@@ -145,6 +146,7 @@ app.include_router(verification_router)
 app.include_router(kyc_router)
 app.include_router(kyc_webhooks_router)
 app.include_router(notifications_router)
+app.include_router(reports_router)
 app.include_router(payments_router)
 app.include_router(webhooks_router)
 app.include_router(metrics_router)
