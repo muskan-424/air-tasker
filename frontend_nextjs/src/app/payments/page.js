@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Lock, CreditCard, Zap, Unlock, AlertTriangle, Loader } from "lucide-react";
+import { CheckCircle2, Lock, CreditCard, Zap, Unlock, AlertTriangle, Loader, Star } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { tasksAPI, paymentsAPI } from "@/lib/api";
 import { openRazorpayCheckout } from "@/lib/razorpay";
@@ -15,7 +15,7 @@ const STEPS = [
 ];
 
 function PaymentsInner() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const searchParams = useSearchParams();
   const urlTaskId = searchParams?.get("task_id") || "";
 
@@ -27,11 +27,31 @@ function PaymentsInner() {
   const [escrowData, setEscrowData] = useState(null);
   const [orderData, setOrderData] = useState(null);
   const [paymentData, setPaymentData] = useState(null);
+  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [existingRating, setExistingRating] = useState(null);
+
+  const isPoster = user?.role === "POSTER";
 
   // Auto-populate task ID from URL
   useEffect(() => {
     if (urlTaskId) setTaskId(urlTaskId);
   }, [urlTaskId]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !taskId.trim() || currentStep < 4) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await tasksAPI.getMyRating(taskId.trim());
+        if (!cancelled && data) setExistingRating(data);
+      } catch (_) {
+        if (!cancelled) setExistingRating(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isLoggedIn, taskId, currentStep]);
 
   const addLedger = (label, detail, type = "info") => {
     setLedger((prev) => [
@@ -137,6 +157,22 @@ function PaymentsInner() {
     setCompleting(false);
   };
 
+  const handleSubmitRating = async () => {
+    if (!isLoggedIn || !isPoster) return;
+    if (!taskId.trim()) { setApiError("Enter a Task ID first."); return; }
+    setRatingSubmitting(true);
+    setApiError(null);
+    try {
+      const data = await tasksAPI.rate(taskId.trim(), ratingScore, ratingComment.trim() || null);
+      setExistingRating(data);
+      addLedger("Tasker Rated", `Score: ${data.score}/5`, "success");
+    } catch (err) {
+      setApiError(err.message);
+      addLedger("Rating Failed", err.message, "error");
+    }
+    setRatingSubmitting(false);
+  };
+
   const stepHandlers = [handleLockEscrow, handleCreateOrder, handleInProgress, handleRelease];
   const stepBtnLabels = ["Lock Escrow via API", "Pay with Razorpay Checkout", "Mark In Progress", "Release Funds via API"];
 
@@ -236,6 +272,48 @@ function PaymentsInner() {
                   <h4>Escrow Complete!</h4>
                   <p>Funds have been released to the tasker. The task lifecycle is complete.</p>
                 </div>
+              </div>
+            )}
+
+            {currentStep >= 4 && isPoster && (
+              <div className="glass-card rating-card">
+                <h4>Rate your tasker</h4>
+                {existingRating ? (
+                  <p className="rating-done">
+                    You rated this task <strong>{existingRating.score}/5</strong>
+                    {existingRating.comment ? ` — "${existingRating.comment}"` : ""}
+                  </p>
+                ) : (
+                  <>
+                    <div className="star-row">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`star-btn ${n <= ratingScore ? "active" : ""}`}
+                          onClick={() => setRatingScore(n)}
+                          aria-label={`Rate ${n} stars`}
+                        >
+                          <Star size={22} fill={n <= ratingScore ? "#f59e0b" : "none"} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="Optional comment about the work quality…"
+                      value={ratingComment}
+                      onChange={(e) => setRatingComment(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-premium btn-teal"
+                      onClick={handleSubmitRating}
+                      disabled={ratingSubmitting}
+                    >
+                      {ratingSubmitting ? "Submitting…" : "Submit rating"}
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -340,6 +418,13 @@ function PaymentsInner() {
         .completed-banner { display: flex; align-items: center; gap: 16px; padding: 20px; background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; }
         .completed-banner h4 { font-size: 1rem; font-weight: 700; color: #10b981; }
         .completed-banner p { font-size: 0.85rem; color: var(--color-text-muted); }
+        .rating-card { margin-top: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .rating-card h4 { font-size: 1rem; font-weight: 700; }
+        .rating-done { font-size: 0.85rem; color: var(--color-text-muted); }
+        .star-row { display: flex; gap: 6px; }
+        .star-btn { background: transparent; border: none; cursor: pointer; padding: 0; color: #64748b; }
+        .star-btn.active { color: #f59e0b; }
+        .rating-card textarea { background: rgba(7,9,19,0.5); border: 1px solid var(--border-glow); border-radius: 8px; padding: 10px 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.85rem; resize: vertical; }
         .ledger-col { display: flex; flex-direction: column; gap: 20px; }
         .escrow-summary { padding: 20px; }
         .escrow-summary h4 { font-size: 0.85rem; font-weight: 700; color: var(--color-teal); margin-bottom: 14px; text-transform: uppercase; }

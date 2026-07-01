@@ -23,6 +23,7 @@ from app.models.task import (
     VerificationResult,
     VerificationStatus,
 )
+from app.models.task_rating import TaskRating
 from app.models.platform_security import NotificationCategory
 from app.models.user import User, UserRole
 from app.services.audit_service import write_audit
@@ -37,8 +38,15 @@ from app.services.task_lifecycle_notifications import (
 )
 from app.services.escrow_razorpay_refund import try_refund_escrow_capture
 from app.services.tasker_escrow_payout import try_escrow_payout_to_tasker
+from app.services.rating_service import (
+    get_existing_rating,
+    mark_task_completed,
+    resolve_ratee_for_poster,
+    task_is_rateable,
+)
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
 from app.services.pin_utils import normalize_india_pin
+from app.schemas.ratings import TaskRateRequest, TaskRatingResponse
 from app.schemas.task import (
     AcceptTaskRequest,
     AcceptTaskResponse,
@@ -59,6 +67,18 @@ from app.schemas.task import (
 )
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+
+
+def _rating_to_response(rating: TaskRating) -> TaskRatingResponse:
+    return TaskRatingResponse(
+        rating_id=str(rating.id),
+        task_id=str(rating.task_id),
+        rater_id=str(rating.rater_id),
+        ratee_id=str(rating.ratee_id),
+        score=rating.score,
+        comment=rating.comment,
+        created_at=rating.created_at.isoformat(),
+    )
 
 
 def _mock_verification_status(evidence: EvidenceUpload) -> tuple[VerificationStatus, float, str]:
@@ -714,6 +734,7 @@ async def release_escrow(
             metadata_json={"released_by": str(current_user.id)},
         )
     )
+    await mark_task_completed(db, task)
     await db.commit()
     await db.refresh(escrow)
     payout_status = await try_escrow_payout_to_tasker(db, task, escrow)
@@ -809,6 +830,9 @@ async def resolve_dispute(
                 detail=f"Razorpay refund failed: {e.response.text[:300]}",
             ) from e
 
+    if payload.outcome == "release":
+        await mark_task_completed(db, task_for_dispute)
+
     await db.commit()
 
     if escrow and payload.outcome == "release":
@@ -834,4 +858,78 @@ async def resolve_dispute(
     )
 
     return DisputeResolveResponse(dispute_id=str(dispute.id), status=dispute.status.value, escrow_status=escrow_status_value)
+
+
+@router.post("/{task_id}/rate", response_model=TaskRatingResponse, status_code=status.HTTP_201_CREATED)
+async def rate_task(
+    request: Request,
+    task_id: str,
+    payload: TaskRateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        task_uuid = uuid.UUID(task_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task_id")
+
+    task = (await db.execute(select(Task).where(Task.id == task_uuid))).scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if not await task_is_rateable(db, task):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Task can only be rated after escrow is released",
+        )
+
+    ratee_id = await resolve_ratee_for_poster(db, task, current_user.id)
+    existing = await get_existing_rating(db, task_id=task.id, rater_id=current_user.id)
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="You already rated this task")
+
+    comment = payload.comment.strip() if payload.comment else None
+    rating = TaskRating(
+        task_id=task.id,
+        rater_id=current_user.id,
+        ratee_id=ratee_id,
+        score=payload.score,
+        comment=comment,
+    )
+    db.add(rating)
+    await db.commit()
+    await db.refresh(rating)
+
+    await write_audit(
+        db,
+        user_id=current_user.id,
+        action="task_rate",
+        resource_type="task_rating",
+        resource_id=rating.id,
+        ip_address=get_client_ip(request),
+        user_agent=get_user_agent(request),
+        meta={"task_id": str(task.id), "score": payload.score, "ratee_id": str(ratee_id)},
+    )
+
+    return _rating_to_response(rating)
+
+
+@router.get("/{task_id}/rating", response_model=TaskRatingResponse | None)
+async def get_my_task_rating(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        task_uuid = uuid.UUID(task_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task_id")
+
+    task = (await db.execute(select(Task).where(Task.id == task_uuid))).scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    rating = await get_existing_rating(db, task_id=task.id, rater_id=current_user.id)
+    if not rating:
+        return None
+    return _rating_to_response(rating)
 

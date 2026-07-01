@@ -28,6 +28,7 @@ from app.models.user import User, UserRole
 from app.models.user_profile import UserProfile
 from app.models.beta_feedback import BetaFeedback, BetaFeedbackCategory
 from app.models.trust_report import TrustFlag, UserReport
+from app.models.task_rating import TaskRating
 
 __all__ = [
     "User",
@@ -65,5 +66,6 @@ __all__ = [
     "BetaFeedbackCategory",
     "UserReport",
     "TrustFlag",
+    "TaskRating",
 ]
 
