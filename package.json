@@ -14,6 +14,8 @@
     "smoke:staging": "python scripts/smoke_deploy.py",
     "go-live:watch": "python scripts/go_live_watch.py",
     "go-live:preflight": "python scripts/go_live_preflight.py",
+    "beta:check": "python scripts/beta_launch_check.py",
+    "release:metadata": "python scripts/print_release_metadata.py",
     "rollback:drill": "python scripts/rollback_drill.py",
     "install:frontend": "npm install --prefix frontend_nextjs",
     "dev:all": "concurrently -n api,web -c blue,green \"docker compose up --build\" \"npm run dev --prefix frontend_nextjs\""

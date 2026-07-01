@@ -23,6 +23,12 @@ python scripts/go_live_watch.py --base-url https://api.yourdomain.com
 
 # 4. Rollback drill (staging, before prod)
 python scripts/rollback_drill.py --base-url http://localhost:4000
+
+# 5. Beta cohort readiness (staging URL required)
+npm run beta:check -- --base-url http://localhost:4000
+
+# 6. Signoff metadata (paste into GO_LIVE_SIGNOFF.md)
+npm run release:metadata
 ```
 
 Env template: [.env.production.example](../.env.production.example)
