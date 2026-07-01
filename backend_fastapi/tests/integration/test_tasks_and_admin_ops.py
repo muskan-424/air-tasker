@@ -77,6 +77,21 @@ def test_task_happy_path_with_escrow_release(client, integration_env):
     assert release.status_code == 200, release.text
     assert release.json()["status"] == "RELEASED"
 
+    rate = client.post(
+        f"/api/tasks/{task_id}/rate",
+        headers=_auth_headers(poster_token),
+        json={"score": 5, "comment": "Integration smoke rating"},
+    )
+    assert rate.status_code == 201, rate.text
+    assert rate.json()["score"] == 5
+
+    summary = client.get(
+        f"/api/users/{rate.json()['ratee_id']}/ratings-summary",
+        headers=_auth_headers(poster_token),
+    )
+    assert summary.status_code == 200, summary.text
+    assert summary.json()["rating_count"] == 1
+
 
 def test_dispute_open_and_admin_resolve(client, integration_env):
     _ = integration_env

@@ -147,6 +147,14 @@ export const tasksAPI = {
   releaseEscrow: (taskId) =>
     apiFetch(`/api/tasks/${taskId}/escrow/release`, { method: "POST" }),
 
+  rate: (taskId, score, comment = null) =>
+    apiFetch(`/api/tasks/${taskId}/rate`, {
+      method: "POST",
+      body: JSON.stringify({ score, comment }),
+    }),
+
+  getMyRating: (taskId) => apiFetch(`/api/tasks/${taskId}/rating`),
+
   listDisputes: (taskId) => apiFetch(`/api/tasks/${taskId}/disputes`),
 
   openDispute: (taskId, reason = null) =>
@@ -325,6 +333,8 @@ export const profileAPI = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+
+  ratingsSummary: (userId) => apiFetch(`/api/users/${userId}/ratings-summary`),
 };
 
 // ─── Account & OTP ───────────────────────────────────────────────────────────

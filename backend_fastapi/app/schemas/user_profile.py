@@ -19,6 +19,8 @@ class UserProfileResponse(BaseModel):
     skills: list[str] = []
     service_pin_codes: list[str] = []
     preferred_languages: list[str] = ["en"]
+    rating_average: float | None = None
+    rating_count: int = 0
 
 
 class UserProfileUpdateRequest(BaseModel):

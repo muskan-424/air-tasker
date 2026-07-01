@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Save, User, MapPin, Wrench, Languages } from "lucide-react";
+import { Save, User, MapPin, Wrench, Languages, Star } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { profileAPI } from "@/lib/api";
 
@@ -20,6 +20,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [ratingAverage, setRatingAverage] = useState(null);
+  const [ratingCount, setRatingCount] = useState(0);
   const [form, setForm] = useState({
     display_name: "",
     bio: "",
@@ -43,6 +45,8 @@ export default function ProfilePage() {
           service_pin_codes: (data.service_pin_codes || []).join(", "),
           preferred_languages: data.preferred_languages?.length ? data.preferred_languages : ["en"],
         });
+        setRatingAverage(data.rating_average ?? null);
+        setRatingCount(data.rating_count || 0);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -96,6 +100,12 @@ export default function ProfilePage() {
         <div>
           <h1>My Profile</h1>
           <p>{isTasker ? "Set skills and service PINs for better task matches." : "Set your default location PIN for posting tasks."}</p>
+          {isTasker && ratingCount > 0 && (
+            <p className="rating-summary">
+              <Star size={14} fill="#f59e0b" color="#f59e0b" />
+              {ratingAverage?.toFixed(1)} average · {ratingCount} review{ratingCount === 1 ? "" : "s"}
+            </p>
+          )}
         </div>
       </div>
 
@@ -174,6 +184,7 @@ export default function ProfilePage() {
         .profile-header { display: flex; gap: 16px; align-items: flex-start; }
         .profile-header h1 { font-size: 1.6rem; font-weight: 800; }
         .profile-header p { color: var(--color-text-muted); font-size: 0.9rem; margin-top: 4px; }
+        .rating-summary { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: #f59e0b; font-size: 0.85rem; font-weight: 700; }
         .profile-header a { color: var(--color-teal); }
         .profile-form { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
         .profile-form label { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); }
