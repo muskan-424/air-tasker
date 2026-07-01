@@ -110,7 +110,33 @@ def run_smoke(base_url: str) -> None:
     )
     if str(publish.get("status", "")).upper() != "PUBLISHED":
         raise SmokeError(f"publish unexpected: {publish!r}")
-    print(f"  ok publish task_id={publish.get('id')}")
+    task_id = publish.get("id")
+    print(f"  ok publish task_id={task_id}")
+
+    beta_cfg = _request("GET", f"{base}/api/beta/config")
+    if not beta_cfg.get("beta_enabled"):
+        raise SmokeError("beta config: beta_enabled is false")
+    categories = beta_cfg.get("categories") or []
+    if "electrical" not in categories:
+        raise SmokeError(f"beta config missing electrical category: {categories!r}")
+    print(f"  ok beta config categories={len(categories)} pins={len(beta_cfg.get('pin_codes') or [])}")
+
+    _request(
+        "POST",
+        f"{base}/api/tasks/{task_id}/rate",
+        headers={"Authorization": f"Bearer {token}"},
+        body={"score": 5, "comment": "smoke should reject before escrow release"},
+        expected=(409,),
+    )
+    print("  ok ratings API (rejects before escrow release)")
+
+    _request(
+        "GET",
+        f"{base}/api/tasks/{task_id}/rating",
+        headers={"Authorization": f"Bearer {token}"},
+        expected=(200,),
+    )
+    print("  ok ratings GET (no rating yet)")
 
     metrics = _request("GET", f"{base}/metrics", expected=(200, 404))
     if metrics != {}:
