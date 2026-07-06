@@ -375,14 +375,9 @@ export default function TranslatedChat() {
             <p className="chat-subtitle">
               Orders · task help · nearby jobs · create tasks · refine answers
               {aiCaps && (
-                <>
-                  <span className={`ai-mode-badge ${aiCaps.gemini_enabled ? "gemini" : "rule"}`}>
-                    {aiCaps.gemini_enabled ? "Gemini live" : "Rule-based AI"}
-                  </span>
-                  <span className={`ai-mode-badge ${aiCaps.rag_mode === "pinecone" ? "gemini" : "rule"}`}>
-                    RAG: {aiCaps.rag_mode === "pinecone" ? "Pinecone" : "Local docs"}
-                  </span>
-                </>
+                <span className={`ai-mode-badge ${aiCaps.gemini_enabled ? "gemini" : "rule"}`}>
+                  {aiCaps.gemini_enabled ? "Smart assistant" : "Assistant"}
+                </span>
               )}
             </p>
           </div>
@@ -451,12 +446,12 @@ export default function TranslatedChat() {
           </button>
           <button type="button" className="tool-btn" onClick={() => setShowTraces((v) => !v)}>
             {showTraces ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            Tool traces
+            Developer details
           </button>
         </div>
       </div>
 
-      {sessionId && (
+      {showTraces && sessionId && (
         <div className="session-bar">
           Session: <code>{sessionId}</code>
         </div>
@@ -534,15 +529,12 @@ export default function TranslatedChat() {
                   </div>
                 )}
 
-                {msg.ragSources?.length > 0 && (
+                {showTraces && msg.ragSources?.length > 0 && (
                   <div className="rag-sources-box">
-                    <span className="rag-sources-title">
-                      Grounded in docs ({msg.ragBackend === "pinecone" ? "Pinecone" : "local"})
-                    </span>
+                    <span className="rag-sources-title">Reference sources</span>
                     {msg.ragSources.map((src, idx) => (
                       <div key={`${src.source}-${idx}-${src.score}`} className="rag-source-line">
                         <strong>{src.source}</strong>
-                        <span className="rag-score">{(src.score * 100).toFixed(0)}% match</span>
                         <p>{src.excerpt}</p>
                       </div>
                     ))}

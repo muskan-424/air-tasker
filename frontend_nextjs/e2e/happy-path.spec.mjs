@@ -30,15 +30,15 @@ test.describe("Marketplace happy path", () => {
     // Poster locks escrow (Razorpay skipped when not configured)
     await loginSession(page, poster);
     await page.goto(`/payments?task_id=${taskId}`);
-    await page.getByRole("button", { name: /Lock Escrow via API/i }).click();
+    await page.getByRole("button", { name: /Lock escrow/i }).click();
     await expect(page.getByText(/Escrow Locked/i)).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("button", { name: /Pay with Razorpay Checkout/i }).click();
-    await expect(page.getByRole("button", { name: /Mark In Progress/i })).toBeVisible({
+    await page.getByRole("button", { name: /Pay with Razorpay/i }).click();
+    await expect(page.getByRole("button", { name: /Mark in progress/i })).toBeVisible({
       timeout: 15_000,
     });
 
-    await page.getByRole("button", { name: /Mark In Progress/i }).click();
+    await page.getByRole("button", { name: /Mark in progress/i }).click();
 
     await uploadEvidenceUrls(request, tasker.token, taskId);
 
@@ -52,10 +52,10 @@ test.describe("Marketplace happy path", () => {
 
     // Poster releases escrow
     await page.goto(`/payments?task_id=${taskId}`);
-    await page.getByRole("button", { name: /Lock Escrow via API/i }).click();
-    await page.getByRole("button", { name: /Pay with Razorpay Checkout/i }).click();
-    await page.getByRole("button", { name: /Mark In Progress/i }).click();
-    await page.getByRole("button", { name: /Release Funds via API/i }).click();
+    await page.getByRole("button", { name: /Lock escrow/i }).click();
+    await page.getByRole("button", { name: /Pay with Razorpay/i }).click();
+    await page.getByRole("button", { name: /Mark in progress/i }).click();
+    await page.getByRole("button", { name: /Release funds/i }).click();
     await expect(page.getByText(/Escrow Released/i)).toBeVisible({ timeout: 15_000 });
   });
 
@@ -75,8 +75,8 @@ test.describe("Marketplace happy path", () => {
     await textarea.fill(
       "E2E UI draft: electrical wiring repair in Dehradun PIN 248001, budget 800 INR"
     );
-    await expect(page.getByRole("button", { name: /Generate Task Draft via API/i })).toBeEnabled();
-    await page.getByRole("button", { name: /Generate Task Draft via API/i }).click();
+    await expect(page.getByRole("button", { name: /Generate task draft/i })).toBeEnabled();
+    await page.getByRole("button", { name: /Generate task draft/i }).click();
     await expect(page.getByRole("button", { name: /Publish Task to Radar/i })).toBeVisible({
       timeout: 60_000,
     });

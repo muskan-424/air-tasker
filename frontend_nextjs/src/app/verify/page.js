@@ -164,7 +164,7 @@ function VerifyInner() {
   return (
     <div className="verify-wrapper">
       <div className="verify-header-box">
-        <h2 className="title-gradient-purple">Vision Proof Verification</h2>
+        <h2 className="title-gradient-purple">Work Verification</h2>
         <p>Taskers upload before/after photos from their device. Posters run AI verification to release escrow.</p>
       </div>
 
@@ -183,8 +183,8 @@ function VerifyInner() {
           <h3>{stage === "uploading" ? "Uploading Evidence..." : "AI Verification in Progress..."}</h3>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
             {stage === "uploading"
-              ? "Uploading files → POST /api/tasks/{id}/evidence"
-              : "POST /api/tasks/{id}/verify — analyzing evidence quality..."}
+              ? "Uploading your before/after photos..."
+              : "Analyzing evidence quality..."}
           </p>
         </div>
       )}

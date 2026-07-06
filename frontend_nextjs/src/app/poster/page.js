@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Mic, Square, Sparkles, CheckCircle2, Play, FileText, Landmark, AlertTriangle } from "lucide-react";
+import { Mic, Square, Sparkles, CheckCircle2, Play, FileText, ListChecks, MapPin, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { draftsAPI, tasksAPI } from "@/lib/api";
 import VoiceInputButton from "@/components/VoiceInputButton";
@@ -29,11 +29,11 @@ export default function PosterSandbox() {
   });
 
   const processingSteps = [
-    "Receiving your input...",
-    "Bhashini API: Translating to English...",
-    "Gemini AI: Parsing intent & category...",
-    "Gemini AI: Extracting required tools...",
-    "Aggregating local pricing estimates...",
+    "Reading your description...",
+    "Detecting category and location...",
+    "Estimating budget and tools...",
+    "Building your contract draft...",
+    "Almost ready...",
   ];
 
   const canvasRef = useRef(null);
@@ -132,7 +132,7 @@ export default function PosterSandbox() {
         if (step >= processingSteps.length - 1) clearInterval(stepInterval);
       }, 900);
 
-      const raw = inputText || "AC unit is leaking water from indoor panel, PIN 110001";
+      const raw = inputText || "electrical wiring repair needed in Dehradun PIN 248001";
       const data = await draftsAPI.create(raw);
 
       clearInterval(stepInterval);
@@ -166,7 +166,7 @@ export default function PosterSandbox() {
     setApiError(null);
     try {
       await tasksAPI.publish(draftId);
-      alert("✅ Task published successfully! It is now live on the Tasker Radar.");
+      alert("Task published successfully! Taskers nearby can now see it on the radar.");
       window.location.href = "/tasker";
     } catch (err) {
       setApiError(err.message);
@@ -190,7 +190,7 @@ export default function PosterSandbox() {
 
       {apiError && (
         <div className="api-error-bar">
-          ⚠ Backend Error: {apiError}
+          ⚠ {apiError}
         </div>
       )}
 
@@ -227,7 +227,7 @@ export default function PosterSandbox() {
             <div className="divider-row"><span className="divider-text">OR TYPE INSTEAD</span></div>
 
             <textarea
-              placeholder="e.g. Mera bedroom AC paani de raha hai, isko saaf karna hai. PIN 110001..."
+              placeholder="e.g. Electrical wiring repair in Dehradun, PIN 248001, budget up to ₹2000..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="input-textarea"
@@ -249,17 +249,17 @@ export default function PosterSandbox() {
               className="btn-premium btn-teal"
               style={{ width: "100%" }}
             >
-              <Sparkles style={{ width: 16, height: 16 }} /> Generate Task Draft via API
+              <Sparkles style={{ width: 16, height: 16 }} /> Generate task draft
             </button>
           </div>
 
           <div className="glass-card panel-card">
-            <h3 className="panel-title">Backend Connected</h3>
+            <h3 className="panel-title">How it works</h3>
             <div className="info-bullets">
               {[
-                { icon: <Sparkles />, title: "POST /api/tasks/drafts", desc: "Your raw description is sent to the FastAPI backend which runs it through the AI schema builder." },
-                { icon: <FileText />, title: "AI Schema Generated", desc: "The backend returns a structured JSON schema with category, tools, budget range, and evidence requirements." },
-                { icon: <Landmark />, title: "POST /api/tasks/{id}/publish", desc: "Publish the reviewed draft to make it live for taskers to discover in the radar feed." },
+                { icon: <FileText />, title: "Describe your task", desc: "Type or speak in Hindi, English, or Hinglish. Mention category words (electrical, plumbing) and your 6-digit PIN." },
+                { icon: <ListChecks />, title: "Review the draft", desc: "AI suggests title, budget, tools, and evidence needs. Edit anything before you publish." },
+                { icon: <MapPin />, title: "Publish to nearby taskers", desc: "Once published, verified taskers in your area can accept and start work." },
               ].map((b, i) => (
                 <div key={i} className="info-bullet">
                   <div className="bullet-icon-box">{b.icon}</div>
@@ -280,7 +280,7 @@ export default function PosterSandbox() {
             <div className="gemini-orb"></div>
             <Sparkles style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", color: "#fff", width: 28, height: 28 }} />
           </div>
-          <h3 className="processing-title">FastAPI + Gemini AI Processing...</h3>
+          <h3 className="processing-title">Building your task draft...</h3>
           <div className="steps-container">
             {processingSteps.map((step, idx) => (
               <div key={idx} className={`step-row ${idx === activeStep ? "step-active" : idx < activeStep ? "step-completed" : "step-pending"}`}>
@@ -298,10 +298,10 @@ export default function PosterSandbox() {
         <div className="draft-container">
           <div className="draft-header">
             <div className="badge-glow">
-              <CheckCircle2 style={{ width: 14, height: 14 }} /> Backend Schema Generated
+              <CheckCircle2 style={{ width: 14, height: 14 }} /> Draft ready
             </div>
-            {draftId && <p className="draft-id-label">Draft ID: <code>{draftId}</code></p>}
-            <h3>Review Contract Parameters</h3>
+
+            <h3>Review your task draft</h3>
           </div>
 
           <div className="draft-editor-grid">
@@ -391,7 +391,7 @@ export default function PosterSandbox() {
         .info-bullet { display: flex; gap: 16px; }
         .bullet-icon-box { width: 40px; height: 40px; border-radius: 10px; background: rgba(20,184,166,0.1); border: 1px solid var(--border-teal); color: var(--color-teal); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .bullet-icon-box svg { width: 20px; height: 20px; }
-        .info-bullet h4 { font-size: 0.85rem; font-weight: 700; color: var(--color-teal); margin-bottom: 4px; font-family: monospace; }
+        .info-bullet h4 { font-size: 0.9rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 4px; }
         .info-bullet p { font-size: 0.82rem; color: var(--color-text-muted); line-height: 1.4; }
         .processing-box { padding: 60px; display: flex; flex-direction: column; align-items: center; gap: 30px; max-width: 650px; margin: 0 auto; }
         .gemini-orb-container { position: relative; width: 80px; height: 80px; }

@@ -8,10 +8,10 @@ import { tasksAPI, paymentsAPI } from "@/lib/api";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 
 const STEPS = [
-  { id: 0, icon: Lock,         label: "Lock Escrow",          desc: "POST /api/tasks/{id}/escrow/start — Funds held in platform." },
-  { id: 1, icon: CreditCard,   label: "Pay via Razorpay Checkout", desc: "Create order → open Checkout modal → webhook confirms capture." },
-  { id: 2, icon: Zap,          label: "Task In Progress",      desc: "Tasker is working. Escrow held securely." },
-  { id: 3, icon: Unlock,       label: "Release Funds",         desc: "POST /api/tasks/{id}/escrow/release — Transfer to tasker." },
+  { id: 0, icon: Lock,         label: "Lock Escrow",          desc: "Funds are held securely on the platform until work is verified." },
+  { id: 1, icon: CreditCard,   label: "Pay via Razorpay",     desc: "Complete payment in the Razorpay checkout — your money stays protected." },
+  { id: 2, icon: Zap,          label: "Task In Progress",      desc: "The tasker works while escrow stays locked." },
+  { id: 3, icon: Unlock,       label: "Release Funds",         desc: "After verification, payment is released to the tasker." },
 ];
 
 function PaymentsInner() {
@@ -174,7 +174,7 @@ function PaymentsInner() {
   };
 
   const stepHandlers = [handleLockEscrow, handleCreateOrder, handleInProgress, handleRelease];
-  const stepBtnLabels = ["Lock Escrow via API", "Pay with Razorpay Checkout", "Mark In Progress", "Release Funds via API"];
+  const stepBtnLabels = ["Lock escrow", "Pay with Razorpay", "Mark in progress", "Release funds"];
 
   const ledgerTypeColors = { info: "var(--color-text-muted)", success: "#10b981", error: "#f87171", warn: "#f59e0b" };
 
@@ -182,7 +182,7 @@ function PaymentsInner() {
     <div className="payments-wrapper">
       <div className="pay-header-box">
         <h2 className="title-gradient-gold">Escrow Payment Flow</h2>
-        <p>Full Razorpay escrow lifecycle wired to the real FastAPI backend.</p>
+        <p>Secure Razorpay escrow — pay only when the job is done and verified.</p>
       </div>
 
       {!isLoggedIn && (

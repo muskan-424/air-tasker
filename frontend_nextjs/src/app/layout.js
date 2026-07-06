@@ -8,7 +8,7 @@ import EnvGuard from "@/components/EnvGuard";
 export const metadata = {
   title: "VayuTask AI | India Gig Marketplace",
   description:
-    "VayuTask AI — India's AI-native gig marketplace. Voice-to-task, translated chat, vision verification, and Razorpay escrow. Powered by Gemini and FastAPI.",
+    "VayuTask AI — India's AI-native gig marketplace. Post tasks, match with taskers, verify work, and pay securely.",
 };
 
 export default function RootLayout({ children }) {
@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
             <BetaBanner />
             <main className="main-wrapper">{children}</main>
           <footer className="footer-bar">
-            <p>© 2026 VayuTask AI India. Built with Gemini &amp; FastAPI.</p>
+            <p>© 2026 VayuTask AI India. Secure gigs, made simple.</p>
           </footer>
           </BetaProvider>
         </AuthProvider>

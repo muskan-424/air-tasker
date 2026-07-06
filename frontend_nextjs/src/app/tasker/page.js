@@ -173,7 +173,7 @@ export default function TaskerRadar() {
     <div className="radar-wrapper">
       <div className="radar-header-box">
         <h2 className="title-gradient-saffron">Tasker Radar Feed</h2>
-        <p>Live tasks from the FastAPI backend. Accept and trace to the payment escrow flow.</p>
+        <p>Live tasks near your PIN. Accept a job and continue to secure payment.</p>
       </div>
 
       {!isLoggedIn && (
@@ -184,7 +184,7 @@ export default function TaskerRadar() {
 
       {apiError && (
         <div className="api-error-bar">
-          ⚠ Backend note: {apiError} — showing demo tasks.
+          ⚠ {apiError} — showing sample tasks.
         </div>
       )}
 
