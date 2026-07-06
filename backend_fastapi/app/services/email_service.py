@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import smtplib
 from email.message import EmailMessage
@@ -15,11 +16,17 @@ async def send_email(to: str, subject: str, body: str) -> str:
         logger.info("[email stub] to=%s subject=%s\n%s", to, subject, body)
         return "stub"
 
+    branded_body = (
+        f"Hi,\n\n{body}\n\n"
+        "— VayuTask AI\n"
+        "India's gig marketplace for tasks, verification, and secure payments.\n"
+    )
+
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = settings.email_from or settings.smtp_user or "noreply@localhost"
     msg["To"] = to
-    msg.set_content(body)
+    msg.set_content(branded_body)
 
     def _send_sync() -> None:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
@@ -27,8 +34,6 @@ async def send_email(to: str, subject: str, body: str) -> str:
                 smtp.starttls()
                 smtp.login(settings.smtp_user, settings.smtp_password)
             smtp.send_message(msg)
-
-    import asyncio
 
     await asyncio.to_thread(_send_sync)
     return "sent"

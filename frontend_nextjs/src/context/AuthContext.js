@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { authAPI } from "@/lib/api";
+import { authAPI, accountAPI } from "@/lib/api";
 
 const AuthContext = createContext(null);
 
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
    */
   const login = async (email, password) => {
     const data = await authAPI.login(email, password);
-    _storeAuth(data.access_token, { email });
+    await _storeAuth(data.access_token, { email });
     return data;
   };
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
    */
   const register = async (email, password, role = "POSTER") => {
     const data = await authAPI.register(email, password, role);
-    _storeAuth(data.access_token, { email, role });
+    await _storeAuth(data.access_token, { email, role });
     return data;
   };
 
@@ -68,8 +68,7 @@ export function AuthProvider({ children }) {
     });
   };
 
-  const _storeAuth = (accessToken, userInfo) => {
-    // Decode minimal info from JWT payload (not sensitive)
+  const _storeAuth = async (accessToken, userInfo) => {
     let decoded = userInfo;
     try {
       const payload = JSON.parse(atob(accessToken.split(".")[1]));
@@ -77,8 +76,21 @@ export function AuthProvider({ children }) {
     } catch (_) {}
 
     localStorage.setItem("vayutask_token", accessToken);
-    localStorage.setItem("vayutask_user", JSON.stringify(decoded));
     setToken(accessToken);
+
+    try {
+      const me = await accountAPI.me();
+      decoded = {
+        ...decoded,
+        id: me.id,
+        email: me.email,
+        role: me.role,
+        email_verified_at: me.email_verified_at,
+        email_verified: Boolean(me.email_verified_at),
+      };
+    } catch (_) {}
+
+    localStorage.setItem("vayutask_user", JSON.stringify(decoded));
     setUser(decoded);
   };
 

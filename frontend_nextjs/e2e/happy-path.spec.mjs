@@ -81,6 +81,6 @@ test.describe("Marketplace happy path", () => {
       timeout: 60_000,
     });
     await page.getByRole("button", { name: /Publish Task to Radar/i }).click();
-    await expect(page).toHaveURL(/\/tasker/);
+    await expect(page).toHaveURL(/\/tasks\/[0-9a-f-]+/);
   });
 });

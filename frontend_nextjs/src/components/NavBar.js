@@ -15,12 +15,13 @@ import {
   LogOut, Bell, CheckCheck, Zap, MessageSquare,
   ShieldCheck, CreditCard, Radio, PenLine, Menu, X,
   Search, ChevronDown, Sparkles, User, Settings,
-  Keyboard, CornerDownLeft, Activity, Info, LayoutDashboard, Gavel, Shield
+  Keyboard, CornerDownLeft, Activity, Info, LayoutDashboard, Gavel, Shield, Rocket
 } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/poster",   label: "Post Task", icon: PenLine },
   { href: "/tasker",   label: "Tasker Radar",   icon: Radio },
+  { href: "/onboarding", label: "Setup",       icon: Rocket },
   { href: "/my-tasks", label: "My Tasks",       icon: LayoutDashboard },
   { href: "/profile",  label: "Profile",        icon: User },
   { href: "/kyc",      label: "KYC & Payout",   icon: ShieldCheck },
@@ -577,6 +578,10 @@ export default function NavBar() {
                     <a href="/tasker" className="vt-dropdown-item">
                       <Radio style={{ width: 14, height: 14 }} />
                       Tasker Radar
+                    </a>
+                    <a href="/onboarding" className="vt-dropdown-item">
+                      <Rocket style={{ width: 14, height: 14 }} />
+                      Setup checklist
                     </a>
                     <a href="/account" className="vt-dropdown-item">
                       <ShieldCheck style={{ width: 14, height: 14 }} />

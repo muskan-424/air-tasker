@@ -27,7 +27,7 @@ async def request_email_otp(
     if payload.purpose == OtpPurpose.EMAIL_VERIFICATION and current_user.email_verified_at:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified")
 
-    await create_and_send_otp(
+    delivery = await create_and_send_otp(
         db,
         email=current_user.email,
         user_id=current_user.id,
@@ -42,7 +42,7 @@ async def request_email_otp(
         ip_address=get_client_ip(request),
         user_agent=get_user_agent(request),
     )
-    return {"status": "sent", "ttl_seconds": settings.otp_ttl_seconds}
+    return {"status": "sent", "ttl_seconds": settings.otp_ttl_seconds, "delivery": delivery}
 
 
 @router.post("/email/verify")

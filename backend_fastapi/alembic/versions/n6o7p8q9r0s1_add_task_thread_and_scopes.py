@@ -15,11 +15,16 @@ down_revision: Union[str, Sequence[str], None] = "m5n6o7p8q9r0"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+task_scope_status = sa.Enum(
+    "PROPOSED",
+    "ACCEPTED",
+    "REJECTED",
+    name="task_scope_status",
+)
+
 
 def upgrade() -> None:
-    task_scope_status = postgresql.ENUM("PROPOSED", "ACCEPTED", "REJECTED", name="task_scope_status")
-    task_scope_status.create(op.get_bind(), checkfirst=True)
-
+    # Let create_table create the enum once (explicit .create() duplicates it in the same txn).
     op.create_table(
         "task_scopes",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -39,9 +44,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["task_id"], ["tasks.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["tasker_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("task_id"),
     )
-    op.create_index("ix_task_scopes_task_id", "task_scopes", ["task_id"])
+    op.create_index("ix_task_scopes_task_id", "task_scopes", ["task_id"], unique=True)
 
     op.create_table(
         "task_thread_messages",
@@ -68,4 +72,4 @@ def downgrade() -> None:
     op.drop_table("task_thread_messages")
     op.drop_index("ix_task_scopes_task_id", table_name="task_scopes")
     op.drop_table("task_scopes")
-    op.execute("DROP TYPE IF EXISTS task_scope_status")
+    task_scope_status.drop(op.get_bind(), checkfirst=True)

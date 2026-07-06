@@ -48,6 +48,7 @@ from app.services.rating_service import (
 )
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
 from app.services.pin_utils import normalize_india_pin
+from app.services.gemini_vision_verification_service import resolve_verification
 from app.schemas.ratings import TaskRateRequest, TaskRatingResponse
 from app.schemas.task_collaboration import TaskDetailResponse, TaskScopeResponse
 from app.schemas.task import (
@@ -84,7 +85,7 @@ def _rating_to_response(rating: TaskRating) -> TaskRatingResponse:
     )
 
 
-from app.services.gemini_vision_verification_service import resolve_verification
+@router.post("/{draft_id}/publish", response_model=PublishTaskResponse)
 async def publish_task(
     request: Request,
     draft_id: str,

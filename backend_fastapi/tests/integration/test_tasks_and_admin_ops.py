@@ -23,6 +23,15 @@ def _auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _set_tasker_service_pins(client, tasker_token: str, pins: list[str]) -> None:
+    resp = client.put(
+        "/api/users/me/profile",
+        json={"service_pin_codes": pins},
+        headers=_auth_headers(tasker_token),
+    )
+    assert resp.status_code == 200, resp.text
+
+
 def _create_and_publish_task(client, poster_token: str) -> str:
     draft = client.post(
         "/api/tasks/drafts",
@@ -44,6 +53,7 @@ def test_task_happy_path_with_escrow_release(client, integration_env):
 
     task_id = _create_and_publish_task(client, poster_token)
 
+    _set_tasker_service_pins(client, tasker_token, ["110001"])
     feed = client.get("/api/tasks/feed", headers=_auth_headers(tasker_token))
     assert feed.status_code == 200, feed.text
     assert any(row["id"] == task_id for row in feed.json())

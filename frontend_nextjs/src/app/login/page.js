@@ -23,7 +23,7 @@ export default function LoginPage() {
       } else {
         await register(email, password, role);
       }
-      window.location.href = "/";
+      window.location.href = tab === "register" ? "/onboarding" : "/";
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
