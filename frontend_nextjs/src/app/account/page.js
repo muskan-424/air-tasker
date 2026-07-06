@@ -25,6 +25,12 @@ export default function AccountPage() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [isLocalDev, setIsLocalDev] = useState(false);
+
+  useEffect(() => {
+    const host = window.location.hostname;
+    setIsLocalDev(host === "localhost" || host === "127.0.0.1");
+  }, []);
 
   const loadAccount = useCallback(async () => {
     if (!isLoggedIn) return;
@@ -143,9 +149,14 @@ export default function AccountPage() {
               <section className="section otp-section">
                 <h2>Email verification (OTP)</h2>
                 <p className="hint">
-                  We send a 6-digit code to your email. In local dev without SMTP, check the
-                  FastAPI terminal for <code>[email stub]</code> log lines.
+                  We send a 6-digit code to your email. Enter it below to verify your account.
                 </p>
+                {isLocalDev && (
+                  <p className="hint dev-hint">
+                    Local dev: if email does not arrive, check the server terminal for{" "}
+                    <code>[email stub]</code> log lines.
+                  </p>
+                )}
 
                 <button
                   type="button"

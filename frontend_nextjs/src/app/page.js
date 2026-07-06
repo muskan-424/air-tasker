@@ -27,8 +27,8 @@ const FEATURES = [
     label: "Option A",
     title: "AI Task Generator",
     tagline: "Speak. AI does the rest.",
-    desc: "Describe your task in any Indian language — Hindi, Tamil, Marathi — and Gemini AI structures it into a verified contract with tools, budget, and evidence requirements.",
-    badge: "Gemini AI",
+    desc: "Describe your task in any Indian language — Hindi, Tamil, Marathi — and AI structures it into a clear contract with tools, budget, and evidence needs.",
+    badge: "AI Draft",
     accent: "teal",
     icon: "🎙️",
     stats: "< 3s",
@@ -54,7 +54,7 @@ const FEATURES = [
     title: "AI-Translated Chat",
     tagline: "Speak your language, they understand theirs.",
     desc: "Real-time bilingual WebSocket chat powered by Bhashini. Every message is translated inline — poster and tasker never need to share a language.",
-    badge: "Bhashini WS",
+    badge: "Live Translate",
     accent: "teal",
     icon: "💬",
     stats: "22+",
@@ -66,8 +66,8 @@ const FEATURES = [
     label: "Option D",
     title: "Vision Proof-of-Work",
     tagline: "See the difference. Release the money.",
-    desc: "Upload before/after photos. Gemini Vision computes a confidence score that automatically unlocks the escrow when the job is verified.",
-    badge: "Gemini Vision",
+    desc: "Upload before/after photos. AI checks the evidence and unlocks escrow when the job looks complete.",
+    badge: "Photo Verify",
     accent: "purple",
     icon: "👁️",
     stats: "92%",
@@ -143,8 +143,8 @@ export default function Home() {
         </h1>
 
         <p className="hero-subtitle">
-          Post gigs in Hindi, Tamil, or Marathi. Let Gemini AI build the contract,
-          Bhashini bridge the language, and Razorpay escrow guarantee the payment.
+          Post gigs in Hindi, Tamil, or Marathi. AI builds the contract,
+          live translation bridges languages, and Razorpay escrow protects your payment.
           The smartest way to get things done in India.
         </p>
 
@@ -179,7 +179,7 @@ export default function Home() {
 
         {/* Tech stack pills */}
         <div className="tech-pills">
-          {["Gemini AI", "Bhashini NLP", "FastAPI", "Razorpay Escrow", "PostgreSQL", "WebSocket"].map((t) => (
+          {["AI drafts", "Voice input", "Live chat", "Secure escrow", "Photo verify", "Local taskers"].map((t) => (
             <span key={t} className="tech-pill">{t}</span>
           ))}
         </div>
@@ -318,7 +318,7 @@ export default function Home() {
               Try AI Chat
             </a>
           </div>
-          <p className="fta-note">Powered by Gemini · Bhashini · Razorpay · FastAPI</p>
+          <p className="fta-note">Secure payments · Multilingual · AI-powered</p>
         </div>
       </section>
 

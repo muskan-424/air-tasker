@@ -183,8 +183,8 @@ function VerifyInner() {
           <h3>{stage === "uploading" ? "Uploading Evidence..." : "AI Verification in Progress..."}</h3>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
             {stage === "uploading"
-              ? "Uploading files → POST /api/tasks/{id}/evidence"
-              : "POST /api/tasks/{id}/verify — analyzing evidence quality..."}
+              ? "Uploading your before/after photos..."
+              : "Analyzing evidence quality..."}
           </p>
         </div>
       )}

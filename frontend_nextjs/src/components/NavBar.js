@@ -246,7 +246,7 @@ export default function NavBar() {
     { title: "Post a New Task Draft", subtitle: "Fast track to create a gig listing", href: "/poster", icon: Sparkles, category: "Quick Actions" },
     { title: "Notification Center", subtitle: "Full inbox, filters, and preferences", href: "/notifications", icon: Bell, category: "Navigation" },
     { title: "Open Notifications Feed", subtitle: "Toggle bell dropdown in navbar", action: "open_notifications", icon: Bell, category: "Quick Actions" },
-    { title: "System Connection Check", subtitle: "Inspect FastAPI backend API status", action: "check_health", icon: Activity, category: "System" },
+    { title: "System Connection Check", subtitle: "Check if the app is online", action: "check_health", icon: Activity, category: "System" },
     { title: "Sign Out Session", subtitle: "Clear credentials and log out", action: "logout", icon: LogOut, category: "Account", authRequired: true }
   ];
 
@@ -289,7 +289,7 @@ export default function NavBar() {
       setNotifOpen(true);
       fetchNotifications();
     } else if (item.action === "check_health") {
-      alert(`VayuTask Engine Latency: ${apiLatency ? `${apiLatency}ms (FastAPI Connected)` : "Offline"}`);
+      alert(`VayuTask is ${apiLatency ? `online (${apiLatency}ms)` : "offline — try again in a moment"}`);
     } else if (item.action === "logout") {
       logout();
     }

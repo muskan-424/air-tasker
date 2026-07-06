@@ -280,13 +280,40 @@ class AgentChatService:
             AgentToolTrace(name="search_tasks", used=True, details=f"count={len(tasks)}"),
         )
 
+    @staticmethod
+    def _format_rag_chunks_as_reply(chunks: list) -> str:
+        """Turn doc chunks into a readable answer without filenames or scores."""
+        snippets: list[str] = []
+        seen: set[str] = set()
+        for chunk in chunks:
+            text = " ".join(chunk.text.split())
+            if len(text) > 280:
+                text = text[:277].rstrip() + "…"
+            key = text[:80].lower()
+            if not text or key in seen:
+                continue
+            seen.add(key)
+            snippets.append(text)
+        if not snippets:
+            return (
+                "VayuTask par aap task post kar sakte ho, taskers accept karte hain, "
+                "phir escrow, verification aur payment release hota hai. Kaunsa step detail chahiye?"
+            )
+        body = "\n\n".join(f"• {s}" for s in snippets[:3])
+        return (
+            "Yeh steps aap follow kar sakte ho:\n\n"
+            f"{body}\n\n"
+            "Kisi bhi step par aur detail chahiye ho to pooch sakte ho."
+        )
+
     def _tool_rag_answer(
         self, message: str
     ) -> tuple[str, AgentToolTrace, list[float] | None, list[RagSourceItem], str]:
         chunks, rag_source = self.rag.retrieve(message, top_k=3)
         if not chunks:
             return (
-                "Yeh app AI-first marketplace hai jahan task post, task discovery, escrow, verification aur disputes handled hote hain. Agar chaho to main details step-by-step bata doon.",
+                "VayuTask par aap task post kar sakte ho, taskers accept karte hain, "
+                "phir escrow, verification aur payment release hota hai. Kaunsa step detail chahiye?",
                 AgentToolTrace(name="rag_lookup", used=True, details="fallback_summary|rag=none"),
                 None,
                 [],
@@ -297,9 +324,9 @@ class AgentChatService:
             RagSourceItem(source=c.source, score=c.score, excerpt=c.text[:280].strip())
             for c in chunks
         ]
-        stitched = "\n".join([f"- ({c.source}, score={c.score:.3f}) {c.text[:220]}..." for c in chunks])
+        reply = self._format_rag_chunks_as_reply(chunks)
         return (
-            f"Maine relevant context nikala hai:\n{stitched}\nAgar chaho to isko concise ya Hindi me refine kar deta hoon.",
+            reply,
             AgentToolTrace(name="rag_lookup", used=True, details=f"chunks={len(chunks)}|rag={rag_source}"),
             scores,
             sources,

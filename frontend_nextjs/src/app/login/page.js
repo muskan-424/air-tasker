@@ -141,11 +141,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Backend status note */}
-        <p className="backend-note">
-          Connects to FastAPI backend at <code>localhost:4000</code>. Run{" "}
-          <code>docker compose up</code> to start the stack.
-        </p>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
