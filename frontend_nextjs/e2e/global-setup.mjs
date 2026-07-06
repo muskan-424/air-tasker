@@ -37,6 +37,7 @@ export function e2eBackendEnv() {
     RAZORPAY_WEBHOOK_EVENTS_CLEANUP_INTERVAL_HOURS: "0",
     USE_MOCK_CHATBOT: "true",
     GEMINI_API_KEY: "",
+    TESTING: "1",
   };
 }
 

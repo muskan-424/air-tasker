@@ -44,9 +44,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["task_id"], ["tasks.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["tasker_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("task_id"),
     )
-    op.create_index("ix_task_scopes_task_id", "task_scopes", ["task_id"])
+    op.create_index("ix_task_scopes_task_id", "task_scopes", ["task_id"], unique=True)
 
     op.create_table(
         "task_thread_messages",
