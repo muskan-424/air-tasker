@@ -84,18 +84,7 @@ def _rating_to_response(rating: TaskRating) -> TaskRatingResponse:
     )
 
 
-def _mock_verification_status(evidence: EvidenceUpload) -> tuple[VerificationStatus, float, str]:
-    has_before = bool(evidence.before_image_url)
-    has_after = bool(evidence.after_image_url)
-    has_video = bool(evidence.evidence_video_url)
-    if has_before and has_after:
-        return VerificationStatus.PASS, 0.92, "Before and after evidence available."
-    if has_after or has_video:
-        return VerificationStatus.LOW_CONFIDENCE, 0.62, "Partial evidence available; manual confirmation recommended."
-    return VerificationStatus.FAIL, 0.18, "No sufficient completion evidence found."
-
-
-@router.post("/{draft_id}/publish", response_model=PublishTaskResponse)
+from app.services.gemini_vision_verification_service import resolve_verification
 async def publish_task(
     request: Request,
     draft_id: str,
@@ -550,7 +539,9 @@ async def verify_task_completion(
     if not evidence:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No evidence uploaded yet")
 
-    status_value, confidence, explanation = _mock_verification_status(evidence)
+    status_value, confidence, explanation, _provider = resolve_verification(
+        evidence, task_schema=task.task_schema
+    )
     verification = VerificationResult(
         task_id=task.id,
         status=status_value,

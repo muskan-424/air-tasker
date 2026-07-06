@@ -14,6 +14,13 @@ from app.services.task_chat_schema_service import resolve_ai_schema
 router = APIRouter(prefix="/api/tasks/drafts", tags=["task-drafts"])
 
 
+def _infer_schema_provider(draft: TaskDraft) -> str:
+    explain = (draft.ai_explain or "").lower()
+    if "gemini" in explain:
+        return "gemini"
+    return "rule"
+
+
 def _draft_to_response(draft: TaskDraft) -> TaskDraftResponse:
     effective_schema = draft.user_edits or draft.ai_schema
     return TaskDraftResponse(
@@ -22,6 +29,7 @@ def _draft_to_response(draft: TaskDraft) -> TaskDraftResponse:
         status=draft.status.value,
         ai_schema=effective_schema,
         ai_explain=draft.ai_explain,
+        schema_provider=_infer_schema_provider(draft),
     )
 
 

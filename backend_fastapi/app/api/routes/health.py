@@ -27,6 +27,8 @@ async def capabilities():
         "rag_mode": rag_mode,
         "rag_namespace": settings.pinecone_namespace,
         "task_schema_provider": "gemini" if gemini_on else "rule",
+        "voice_stt_provider": "gemini" if gemini_on else "stub",
+        "vision_verify_provider": "gemini" if gemini_on else "rule",
         "razorpay_configured": bool(settings.razorpay_key_id and settings.razorpay_key_secret),
     }
 
