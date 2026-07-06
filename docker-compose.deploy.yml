@@ -1,0 +1,18 @@
+# Production/staging deploy overlay (Oracle VM, VPS).
+# Usage:
+#   set -a && source .env.deploy && set +a
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml -f docker-compose.deploy.yml up --build -d
+
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.deploy}
+
+  api:
+    env_file: []
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.deploy}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env.deploy}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS to your Vercel URL}
+      ENVIRONMENT: ${ENVIRONMENT:-staging}
+    restart: unless-stopped

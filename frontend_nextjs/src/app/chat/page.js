@@ -539,8 +539,8 @@ export default function TranslatedChat() {
                     <span className="rag-sources-title">
                       Grounded in docs ({msg.ragBackend === "pinecone" ? "Pinecone" : "local"})
                     </span>
-                    {msg.ragSources.map((src) => (
-                      <div key={`${src.source}-${src.score}`} className="rag-source-line">
+                    {msg.ragSources.map((src, idx) => (
+                      <div key={`${src.source}-${idx}-${src.score}`} className="rag-source-line">
                         <strong>{src.source}</strong>
                         <span className="rag-score">{(src.score * 100).toFixed(0)}% match</span>
                         <p>{src.excerpt}</p>

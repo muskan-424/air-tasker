@@ -8,6 +8,7 @@ Controlled production launch using repo runbooks, signoff templates, and automat
 | [CHANGE_FREEZE_COMMS.md](./CHANGE_FREEZE_COMMS.md) | Stakeholder + change freeze templates |
 | [FIRST_60_MINUTES.md](./FIRST_60_MINUTES.md) | Post-deploy monitoring checklist |
 | [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md) | Staging rollback exercise |
+| [../deploy/ORACLE_VERCEL.md](../deploy/ORACLE_VERCEL.md) | **$0 deploy:** Vercel + Oracle + Cloudflare Tunnel |
 
 ## Quick commands
 

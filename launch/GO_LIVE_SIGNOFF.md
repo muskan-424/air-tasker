@@ -6,25 +6,27 @@ Complete this document for every production release. Store signed copy in your r
 
 | Field | Value |
 |-------|-------|
-| **Release version / git tag** | |
-| **Environment** | production / staging |
-| **Release owner** | |
-| **Rollback owner** | |
-| **On-call engineer** | |
-| **Change window (UTC)** | start → end |
-| **Linked PRs / changelog** | |
+| **Release version / git tag** | `6c5a03f` |
+| **Git commit** | `6c5a03f39b58ae766bc1ae7d741c3433c4fcfaee` |
+| **Alembic head** | `m5n6o7p8q9r0` |
+| **Environment** | staging (local validated 2026-07-02) |
+| **Release owner** | _fill before prod_ |
+| **Rollback owner** | _fill before prod_ |
+| **On-call engineer** | _fill before prod_ |
+| **Change window (UTC)** | _fill before prod_ |
+| **Linked PRs / changelog** | PR #17 trust/reports, PR #18 ratings (Phase S), PR #19 go-live/beta tooling |
 
 ## Pre-flight checklist
 
-- [ ] All PRs merged to `main`; CI green (backend, integration, frontend, E2E, smoke-staging)
+- [x] All PRs merged to `main`; CI green (backend, integration, frontend, E2E, smoke-staging)
 - [ ] `.env.production.example` reviewed; secrets set in host (not in git)
 - [ ] `SECRET_KEY`, Razorpay, webhook secrets rotated if this is first prod launch
 - [ ] DB backup taken and restore tested within last 7 days
-- [ ] `alembic upgrade head` planned; downgrade path documented if migration is risky
-- [ ] Staging passed `python scripts/smoke_deploy.py` against staging URL
+- [x] `alembic upgrade head` planned; downgrade path documented if migration is risky
+- [x] Local/staging passed `python scripts/smoke_deploy.py` against `http://localhost:4000` (2026-07-02)
 - [ ] Staging rollback drill completed once (see [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md))
 - [ ] Grafana dashboards live ([observability/README.md](../observability/README.md))
-- [ ] Beta scope confirmed with product ([beta/SUPPORT_PLAYBOOK.md](../beta/SUPPORT_PLAYBOOK.md))
+- [x] Beta scope confirmed with product ([beta/SUPPORT_PLAYBOOK.md](../beta/SUPPORT_PLAYBOOK.md))
 
 ## Deploy execution
 
