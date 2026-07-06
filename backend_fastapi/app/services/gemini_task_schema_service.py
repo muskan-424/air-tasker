@@ -58,13 +58,19 @@ def normalize_task_schema(raw: dict, source_text: str) -> dict:
     if not isinstance(tools, list):
         tools = [t.strip() for t in str(tools or "").split(",") if t.strip()]
 
+    location = str(raw.get("location") or "").strip()
+    if not location:
+        pins = re.findall(r"\b(\d{6})\b", source_text)
+        if pins:
+            location = pins[0]
+
     return {
         "title": str(raw.get("title") or source_text[:120]).strip(),
         "description": str(raw.get("description") or source_text).strip(),
         "language": str(raw.get("language") or "en")[:10],
         "category": str(raw.get("category") or "general").strip(),
         "urgencyLevel": str(raw.get("urgencyLevel") or "normal"),
-        "location": str(raw.get("location") or "").strip(),
+        "location": location,
         "estimatedDurationMinutes": int(raw.get("estimatedDurationMinutes") or 60),
         "requiredTools": tools,
         "completionCriteria": str(

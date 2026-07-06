@@ -21,3 +21,11 @@ def test_resolve_ai_schema_falls_back_to_rule_without_gemini():
     assert provider == "rule"
     assert schema["category"] == "electrical"
     assert schema["title"]
+
+
+def test_resolve_ai_schema_extracts_pin_into_location():
+    schema, provider = resolve_ai_schema(
+        "Need electrical repair in Dehradun PIN 110001 with quick turnaround, budget up to 2000 INR"
+    )
+    assert provider == "rule"
+    assert schema["location"] == "110001"
