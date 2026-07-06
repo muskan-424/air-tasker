@@ -165,9 +165,8 @@ export default function PosterSandbox() {
     if (!draftId) return;
     setApiError(null);
     try {
-      await tasksAPI.publish(draftId);
-      alert("Task published successfully! Taskers nearby can now see it on the radar.");
-      window.location.href = "/tasker";
+      const published = await tasksAPI.publish(draftId);
+      window.location.href = `/tasks/${published.id}`;
     } catch (err) {
       setApiError(err.message);
     }

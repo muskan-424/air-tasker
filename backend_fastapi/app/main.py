@@ -19,6 +19,7 @@ from app.api.routes.metrics import router as metrics_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.task_collaboration import router as task_collaboration_router
 from app.api.routes.task_drafts import router as task_drafts_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.uploads import router as uploads_router
@@ -155,6 +156,7 @@ app.include_router(admin_rag_router)
 app.include_router(chat_router)
 app.include_router(voice_router)
 app.include_router(task_drafts_router)
+app.include_router(task_collaboration_router)
 app.include_router(tasks_router)
 app.include_router(users_router)
 app.include_router(uploads_router)

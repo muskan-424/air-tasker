@@ -155,6 +155,26 @@ export const tasksAPI = {
 
   getMyRating: (taskId) => apiFetch(`/api/tasks/${taskId}/rating`),
 
+  getScope: (taskId) => apiFetch(`/api/tasks/${taskId}/scope`),
+
+  proposeScope: (taskId, { agreed_price, currency = "INR", scope_json = null, note = null }) =>
+    apiFetch(`/api/tasks/${taskId}/scope/propose`, {
+      method: "POST",
+      body: JSON.stringify({ agreed_price, currency, scope_json, note }),
+    }),
+
+  acceptScope: (taskId) =>
+    apiFetch(`/api/tasks/${taskId}/scope/accept`, { method: "POST" }),
+
+  listMessages: (taskId, limit = 50) =>
+    apiFetch(`/api/tasks/${taskId}/messages?limit=${limit}`),
+
+  postMessage: (taskId, text, sourceLang = "auto", targetLang = "auto") =>
+    apiFetch(`/api/tasks/${taskId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ text, source_lang: sourceLang, target_lang: targetLang }),
+    }),
+
   listDisputes: (taskId) => apiFetch(`/api/tasks/${taskId}/disputes`),
 
   openDispute: (taskId, reason = null) =>

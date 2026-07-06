@@ -49,12 +49,7 @@ export default function TaskerRadar() {
       setTasks(data);
     } catch (err) {
       setApiError(err.message);
-      // Show mock data so UI is still useful when backend is down
-      setTasks([
-        { id: "demo-1", category: "Electrical", subcategory: "AC Repair", task_schema: { title: "AC Leak Fix", location: "110001", estimated_duration_minutes: 90, suggested_price_range: { min: 800, max: 1200 } }, status: "published" },
-        { id: "demo-2", category: "Plumbing", subcategory: "Pipe Fix", task_schema: { title: "Burst Pipe Repair", location: "400001", estimated_duration_minutes: 60, suggested_price_range: { min: 500, max: 900 } }, status: "published" },
-        { id: "demo-3", category: "Cleaning", subcategory: "Deep Clean", task_schema: { title: "3BHK Deep Clean", location: "560001", estimated_duration_minutes: 240, suggested_price_range: { min: 1500, max: 2500 } }, status: "published" },
-      ]);
+      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -84,8 +79,7 @@ export default function TaskerRadar() {
     try {
       await tasksAPI.accept(taskId);
       setAcceptedIds((prev) => new Set([...prev, taskId]));
-      alert(`✅ Task accepted! You can now proceed to the payment & verification flow.\n\nTask ID: ${taskId}`);
-      window.location.href = `/payments?task_id=${taskId}`;
+      window.location.href = `/tasks/${taskId}`;
     } catch (err) {
       alert(`Accept failed: ${err.message}`);
     } finally {
@@ -235,7 +229,12 @@ export default function TaskerRadar() {
             </div>
           )}
           {!loading && tasks.length === 0 && (
-            <div className="empty-msg">No tasks found. <a href="/poster" style={{ color: "var(--color-teal)" }}>Post one!</a></div>
+            <div className="empty-msg">
+              No tasks in your service area.
+              {apiError ? ` ${apiError}` : " Set PIN codes on your "}
+              {!apiError && <a href="/profile" style={{ color: "var(--color-teal)" }}>profile</a>}
+              {!apiError && " (e.g. 248001, 110001, 560001) to see nearby jobs."}
+            </div>
           )}
           {tasks.map((task) => {
             const schema = task.task_schema || {};
