@@ -363,6 +363,10 @@ export const accountAPI = {
   me: () => apiFetch("/api/users/me"),
 };
 
+export const onboardingAPI = {
+  get: () => apiFetch("/api/users/me/onboarding"),
+};
+
 export const verificationAPI = {
   requestEmailOtp: (purpose = "EMAIL_VERIFICATION") =>
     apiFetch("/api/verification/email/request-otp", {

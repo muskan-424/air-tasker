@@ -66,7 +66,13 @@ export default function AccountPage() {
       const res = await verificationAPI.requestEmailOtp("EMAIL_VERIFICATION");
       setOtpSent(true);
       setTtlSeconds(res.ttl_seconds || 600);
-      setSuccess("Verification code sent. Check your inbox — or backend logs if SMTP is not configured.");
+      if (res.delivery === "sent") {
+        setSuccess("Verification code sent to your email.");
+      } else if (isLocalDev) {
+        setSuccess("Code generated — check the server terminal for [email stub] if SMTP is not configured.");
+      } else {
+        setSuccess("Code generated. Email delivery is not configured on this server — contact support.");
+      }
     } catch (err) {
       setError(err.message);
     } finally {

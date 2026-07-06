@@ -26,7 +26,7 @@ async def create_and_send_otp(
     email: str,
     user_id,
     purpose: OtpPurpose,
-) -> None:
+) -> str:
     code = _generate_code()
     expires = datetime.now(timezone.utc) + timedelta(seconds=settings.otp_ttl_seconds)
     row = OtpChallenge(
@@ -39,13 +39,21 @@ async def create_and_send_otp(
     db.add(row)
     await db.commit()
 
-    subj = "Your verification code"
+    subj = "Your VayuTask verification code"
     if purpose == OtpPurpose.EMAIL_VERIFICATION:
-        body = f"Your email verification code is: {code}\nIt expires in {settings.otp_ttl_seconds // 60} minutes."
+        body = (
+            f"Your email verification code is: {code}\n"
+            f"It expires in {settings.otp_ttl_seconds // 60} minutes.\n\n"
+            "Enter this code on the Account page in the app."
+        )
     else:
-        body = f"Your security code is: {code}\nIt expires in {settings.otp_ttl_seconds // 60} minutes."
+        body = (
+            f"Your security code is: {code}\n"
+            f"It expires in {settings.otp_ttl_seconds // 60} minutes."
+        )
 
-    await send_email(email, subj, body)
+    delivery = await send_email(email, subj, body)
+    return delivery
 
 
 async def verify_otp(

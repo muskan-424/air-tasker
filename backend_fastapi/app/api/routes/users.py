@@ -8,8 +8,10 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.models.user_profile import UserProfile
+from app.schemas.onboarding import OnboardingResponse
 from app.schemas.ratings import UserRatingSummaryResponse
 from app.schemas.user_profile import UserMeResponse, UserProfileResponse, UserProfileUpdateRequest
+from app.services.onboarding_service import build_onboarding_status
 from app.services.rating_service import get_user_rating_summary
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -51,6 +53,14 @@ async def get_me(current_user: User = Depends(get_current_user)):
         role=current_user.role.value,
         email_verified_at=current_user.email_verified_at.isoformat() if current_user.email_verified_at else None,
     )
+
+
+@router.get("/me/onboarding", response_model=OnboardingResponse)
+async def get_my_onboarding(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await build_onboarding_status(db, current_user)
 
 
 @router.get("/me/profile", response_model=UserProfileResponse)

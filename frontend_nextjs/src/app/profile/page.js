@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { Save, User, MapPin, Wrench, Languages, Star } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { profileAPI } from "@/lib/api";
@@ -100,6 +101,7 @@ export default function ProfilePage() {
         <div>
           <h1>My Profile</h1>
           <p>{isTasker ? "Set skills and service PINs for better task matches." : "Set your default location PIN for posting tasks."}</p>
+          <Link href="/onboarding" className="onboarding-link">View setup checklist →</Link>
           {isTasker && ratingCount > 0 && (
             <p className="rating-summary">
               <Star size={14} fill="#f59e0b" color="#f59e0b" />
@@ -138,6 +140,9 @@ export default function ProfilePage() {
 
           {isTasker && (
             <>
+              <p className="beta-pin-hint">
+                Beta service PINs: 248001 (Dehradun), 110001 (Delhi NCR), 560001 (Bengaluru)
+              </p>
               <label>
                 <Wrench size={14} /> Skills (comma separated)
                 <input
@@ -184,6 +189,7 @@ export default function ProfilePage() {
         .profile-header { display: flex; gap: 16px; align-items: flex-start; }
         .profile-header h1 { font-size: 1.6rem; font-weight: 800; }
         .profile-header p { color: var(--color-text-muted); font-size: 0.9rem; margin-top: 4px; }
+        .onboarding-link { display: inline-block; margin-top: 6px; font-size: 0.82rem; color: var(--color-teal); font-weight: 600; text-decoration: none; }
         .rating-summary { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: #f59e0b; font-size: 0.85rem; font-weight: 700; }
         .profile-header a { color: var(--color-teal); }
         .profile-form { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -198,6 +204,7 @@ export default function ProfilePage() {
         .lang-chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-glow); background: transparent; color: var(--color-text-muted); font-size: 0.78rem; cursor: pointer; font-family: inherit; }
         .lang-chip.active { border-color: var(--border-teal); color: var(--color-teal); background: rgba(20,184,166,0.08); }
         .success-bar { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 10px 14px; color: #10b981; font-size: 0.85rem; }
+        .beta-pin-hint { font-size: 0.8rem; color: var(--color-saffron); padding: 8px 12px; border-radius: 8px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
         .muted { color: var(--color-text-muted); }
       `}</style>
     </div>
