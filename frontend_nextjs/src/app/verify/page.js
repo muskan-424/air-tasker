@@ -164,7 +164,7 @@ function VerifyInner() {
   return (
     <div className="verify-wrapper">
       <div className="verify-header-box">
-        <h2 className="title-gradient-purple">Vision Proof Verification</h2>
+        <h2 className="title-gradient-purple">Work Verification</h2>
         <p>Taskers upload before/after photos from their device. Posters run AI verification to release escrow.</p>
       </div>
 

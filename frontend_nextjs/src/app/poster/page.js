@@ -300,8 +300,8 @@ export default function PosterSandbox() {
             <div className="badge-glow">
               <CheckCircle2 style={{ width: 14, height: 14 }} /> Draft ready
             </div>
-            {draftId && <p className="draft-id-label">Draft ID: <code>{draftId}</code></p>}
-            <h3>Review Contract Parameters</h3>
+
+            <h3>Review your task draft</h3>
           </div>
 
           <div className="draft-editor-grid">

@@ -451,7 +451,7 @@ export default function TranslatedChat() {
         </div>
       </div>
 
-      {sessionId && (
+      {showTraces && sessionId && (
         <div className="session-bar">
           Session: <code>{sessionId}</code>
         </div>

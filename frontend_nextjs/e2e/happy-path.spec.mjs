@@ -33,12 +33,12 @@ test.describe("Marketplace happy path", () => {
     await page.getByRole("button", { name: /Lock escrow/i }).click();
     await expect(page.getByText(/Escrow Locked/i)).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("button", { name: /Pay with Razorpay Checkout/i }).click();
-    await expect(page.getByRole("button", { name: /Mark In Progress/i })).toBeVisible({
+    await page.getByRole("button", { name: /Pay with Razorpay/i }).click();
+    await expect(page.getByRole("button", { name: /Mark in progress/i })).toBeVisible({
       timeout: 15_000,
     });
 
-    await page.getByRole("button", { name: /Mark In Progress/i }).click();
+    await page.getByRole("button", { name: /Mark in progress/i }).click();
 
     await uploadEvidenceUrls(request, tasker.token, taskId);
 
@@ -53,8 +53,8 @@ test.describe("Marketplace happy path", () => {
     // Poster releases escrow
     await page.goto(`/payments?task_id=${taskId}`);
     await page.getByRole("button", { name: /Lock escrow/i }).click();
-    await page.getByRole("button", { name: /Pay with Razorpay Checkout/i }).click();
-    await page.getByRole("button", { name: /Mark In Progress/i }).click();
+    await page.getByRole("button", { name: /Pay with Razorpay/i }).click();
+    await page.getByRole("button", { name: /Mark in progress/i }).click();
     await page.getByRole("button", { name: /Release funds/i }).click();
     await expect(page.getByText(/Escrow Released/i)).toBeVisible({ timeout: 15_000 });
   });

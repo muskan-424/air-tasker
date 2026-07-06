@@ -19,14 +19,14 @@ import {
 } from "lucide-react";
 
 const NAV_LINKS = [
-  { href: "/poster",   label: "Poster Sandbox", icon: PenLine },
+  { href: "/poster",   label: "Post Task", icon: PenLine },
   { href: "/tasker",   label: "Tasker Radar",   icon: Radio },
   { href: "/my-tasks", label: "My Tasks",       icon: LayoutDashboard },
   { href: "/profile",  label: "Profile",        icon: User },
   { href: "/kyc",      label: "KYC & Payout",   icon: ShieldCheck },
   { href: "/chat",     label: "AI Chat",         icon: MessageSquare },
   { href: "/notifications", label: "Alerts",     icon: Bell },
-  { href: "/verify",   label: "Vision Proof",    icon: ShieldCheck },
+  { href: "/verify",   label: "Verify Work",    icon: ShieldCheck },
   { href: "/payments", label: "Payments",        icon: CreditCard },
   { href: "/disputes", label: "Disputes",       icon: Gavel },
   { href: "/feedback", label: "Feedback",        icon: MessageSquare },
@@ -238,10 +238,10 @@ export default function NavBar() {
 
   // ── Command Palette combined navigation & live queries ────────────────────
   const paletteActions = [
-    { title: "Poster Sandbox", subtitle: "Draft, translate, and post gigs", href: "/poster", icon: PenLine, category: "Navigation" },
+    { title: "Post a Task", subtitle: "Describe your gig and publish to nearby taskers", href: "/poster", icon: PenLine, category: "Navigation" },
     { title: "Tasker Radar Feed", subtitle: "Browse live local jobs and accept work", href: "/tasker", icon: Radio, category: "Navigation" },
     { title: "AI Translation Chat", subtitle: "Real-time communication with translation", href: "/chat", icon: MessageSquare, category: "Navigation" },
-    { title: "Vision Proof Verification", subtitle: "Validate completed works using AI analysis", href: "/verify", icon: ShieldCheck, category: "Navigation" },
+    { title: "Work Verification", subtitle: "Upload before/after photos to confirm completion", href: "/verify", icon: ShieldCheck, category: "Navigation" },
     { title: "Escrow & Ledger Payments", subtitle: "Secure transactions and payment logs", href: "/payments", icon: CreditCard, category: "Navigation" },
     { title: "Post a New Task Draft", subtitle: "Fast track to create a gig listing", href: "/poster", icon: Sparkles, category: "Quick Actions" },
     { title: "Notification Center", subtitle: "Full inbox, filters, and preferences", href: "/notifications", icon: Bell, category: "Navigation" },
@@ -572,7 +572,7 @@ export default function NavBar() {
                     </a>
                     <a href="/poster" className="vt-dropdown-item">
                       <LayoutDashboard style={{ width: 14, height: 14 }} />
-                      Poster Sandbox
+                      Post a Task
                     </a>
                     <a href="/tasker" className="vt-dropdown-item">
                       <Radio style={{ width: 14, height: 14 }} />
@@ -580,7 +580,7 @@ export default function NavBar() {
                     </a>
                     <a href="/account" className="vt-dropdown-item">
                       <ShieldCheck style={{ width: 14, height: 14 }} />
-                      Account & Email OTP
+                      Account
                     </a>
                     {(user?.role === "ADMIN" || user?.role === "REVIEWER") && (
                       <a href="/admin" className="vt-dropdown-item">
@@ -598,7 +598,7 @@ export default function NavBar() {
                     </a>
                     <a href="/verify" className="vt-dropdown-item">
                       <ShieldCheck style={{ width: 14, height: 14 }} />
-                      Vision Proofs
+                      Verify Work
                     </a>
                     <a href="/payments" className="vt-dropdown-item">
                       <CreditCard style={{ width: 14, height: 14 }} />
