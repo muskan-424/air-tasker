@@ -48,6 +48,8 @@ class Task(Base):
     verification_results = relationship("VerificationResult", back_populates="task", cascade="all, delete-orphan")
     escrow_payment = relationship("EscrowPayment", back_populates="task", uselist=False, cascade="all, delete-orphan")
     disputes = relationship("Dispute", back_populates="task", cascade="all, delete-orphan")
+    scope = relationship("TaskScope", back_populates="task", uselist=False, cascade="all, delete-orphan")
+    thread_messages = relationship("TaskThreadMessage", back_populates="task", cascade="all, delete-orphan")
 
 
 class AcceptanceStatus(str, enum.Enum):

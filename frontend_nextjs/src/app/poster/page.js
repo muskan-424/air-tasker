@@ -14,6 +14,7 @@ export default function PosterSandbox() {
   const [stage, setStage] = useState("input"); // 'input' | 'processing' | 'draft'
   const [activeStep, setActiveStep] = useState(0);
   const [draftId, setDraftId] = useState(null);
+  const [schemaProvider, setSchemaProvider] = useState(null);
   const [apiError, setApiError] = useState(null);
 
   const [draftSchema, setDraftSchema] = useState({
@@ -141,6 +142,7 @@ export default function PosterSandbox() {
       // Map backend ai_schema to local state
       const schema = data.ai_schema || {};
       setDraftId(data.id);
+      setSchemaProvider(data.schema_provider || "rule");
       setDraftSchema({
         category: schema.category || "General Service",
         title: schema.title || raw.slice(0, 60),
@@ -165,9 +167,8 @@ export default function PosterSandbox() {
     if (!draftId) return;
     setApiError(null);
     try {
-      await tasksAPI.publish(draftId);
-      alert("Task published successfully! Taskers nearby can now see it on the radar.");
-      window.location.href = "/tasker";
+      const published = await tasksAPI.publish(draftId);
+      window.location.href = `/tasks/${published.id}`;
     } catch (err) {
       setApiError(err.message);
     }
@@ -299,6 +300,11 @@ export default function PosterSandbox() {
           <div className="draft-header">
             <div className="badge-glow">
               <CheckCircle2 style={{ width: 14, height: 14 }} /> Draft ready
+              {schemaProvider && (
+                <span className="provider-chip">
+                  {schemaProvider === "gemini" ? "Smart AI" : "Quick draft"}
+                </span>
+              )}
             </div>
 
             <h3>Review your task draft</h3>
@@ -408,6 +414,7 @@ export default function PosterSandbox() {
         .draft-container { display: flex; flex-direction: column; gap: 30px; }
         .draft-header { text-align: center; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .badge-glow { background: rgba(20,184,166,0.1); border: 1px solid var(--border-teal); color: var(--color-teal); font-size: 0.75rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
+        .provider-chip { margin-left: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.35); color: var(--color-saffron); font-size: 0.65rem; text-transform: none; }
         .draft-id-label { font-size: 0.75rem; color: var(--color-text-muted); } .draft-id-label code { color: var(--color-teal); }
         .draft-header h3 { font-size: 1.8rem; font-weight: 800; }
         .draft-editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }

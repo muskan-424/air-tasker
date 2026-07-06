@@ -16,4 +16,5 @@ class TaskDraftResponse(BaseModel):
     status: str
     ai_schema: dict
     ai_explain: str | None = None
+    schema_provider: str | None = None
 

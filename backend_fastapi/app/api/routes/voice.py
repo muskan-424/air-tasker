@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.services.gemini_voice_service import transcribe_audio_bytes
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
@@ -18,14 +19,19 @@ async def transcribe_audio(
     language_hint: str = "auto",
     current_user: User = Depends(get_current_user),
 ):
-    """Speech-to-text stub. Integrate Whisper / Google Speech-to-Text next."""
+    """Speech-to-text via Gemini multimodal when configured; stub fallback otherwise."""
     _ = current_user.id
     data = await file.read()
+    text, language, provider = transcribe_audio_bytes(
+        data,
+        mime_type=file.content_type,
+        filename=file.filename,
+        language_hint=language_hint,
+    )
     return {
-        "text": f"[stub transcript from {file.filename or 'audio'}; bytes={len(data)}]",
-        "language": language_hint,
-        "provider": "stub",
-        "note": "Replace with real STT (Whisper, Google STT, Bhashini).",
+        "text": text,
+        "language": language,
+        "provider": provider,
     }
 
 

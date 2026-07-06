@@ -29,6 +29,7 @@ from app.models.user_profile import UserProfile
 from app.models.beta_feedback import BetaFeedback, BetaFeedbackCategory
 from app.models.trust_report import TrustFlag, UserReport
 from app.models.task_rating import TaskRating
+from app.models.task_collaboration import TaskScope, TaskScopeStatus, TaskThreadMessage
 
 __all__ = [
     "User",
@@ -67,5 +68,8 @@ __all__ = [
     "UserReport",
     "TrustFlag",
     "TaskRating",
+    "TaskScope",
+    "TaskScopeStatus",
+    "TaskThreadMessage",
 ]
 

@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     evidence_upload_dir: str = "uploads/evidence"
     evidence_max_file_bytes: int = 10 * 1024 * 1024  # 10 MB
 
+    # Vision verification (Gemini when configured)
+    verification_pass_confidence: float = 0.75
+    verification_low_confidence: float = 0.45
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     def cors_origins(self) -> list[str]:

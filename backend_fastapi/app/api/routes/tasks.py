@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_client_ip, get_current_user, get_user_agent
@@ -24,6 +24,8 @@ from app.models.task import (
     VerificationStatus,
 )
 from app.models.task_rating import TaskRating
+from app.models.task_collaboration import TaskScope, TaskScopeStatus
+from app.models.user_profile import UserProfile
 from app.models.platform_security import NotificationCategory
 from app.models.user import User, UserRole
 from app.services.audit_service import write_audit
@@ -47,6 +49,7 @@ from app.services.rating_service import (
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
 from app.services.pin_utils import normalize_india_pin
 from app.schemas.ratings import TaskRateRequest, TaskRatingResponse
+from app.schemas.task_collaboration import TaskDetailResponse, TaskScopeResponse
 from app.schemas.task import (
     AcceptTaskRequest,
     AcceptTaskResponse,
@@ -81,18 +84,7 @@ def _rating_to_response(rating: TaskRating) -> TaskRatingResponse:
     )
 
 
-def _mock_verification_status(evidence: EvidenceUpload) -> tuple[VerificationStatus, float, str]:
-    has_before = bool(evidence.before_image_url)
-    has_after = bool(evidence.after_image_url)
-    has_video = bool(evidence.evidence_video_url)
-    if has_before and has_after:
-        return VerificationStatus.PASS, 0.92, "Before and after evidence available."
-    if has_after or has_video:
-        return VerificationStatus.LOW_CONFIDENCE, 0.62, "Partial evidence available; manual confirmation recommended."
-    return VerificationStatus.FAIL, 0.18, "No sufficient completion evidence found."
-
-
-@router.post("/{draft_id}/publish", response_model=PublishTaskResponse)
+from app.services.gemini_vision_verification_service import resolve_verification
 async def publish_task(
     request: Request,
     draft_id: str,
@@ -153,6 +145,63 @@ def _task_to_feed_item(task: Task) -> TaskFeedItem:
         category=task.category,
         subcategory=task.subcategory,
         task_schema=task.task_schema,
+    )
+
+
+def _scope_to_response(scope: TaskScope) -> TaskScopeResponse:
+    return TaskScopeResponse(
+        scope_id=str(scope.id),
+        task_id=str(scope.task_id),
+        status=scope.status.value,
+        agreed_price=str(scope.agreed_price),
+        currency=scope.currency,
+        scope_json=scope.scope_json,
+        note=scope.note,
+        proposed_by_id=str(scope.proposed_by_id),
+        proposed_at=scope.proposed_at.isoformat(),
+        agreed_at=scope.agreed_at.isoformat() if scope.agreed_at else None,
+    )
+
+
+async def _task_to_detail(db: AsyncSession, task: Task) -> TaskDetailResponse:
+    acceptance = (
+        await db.execute(select(TaskAcceptance).where(TaskAcceptance.task_id == task.id))
+    ).scalar_one_or_none()
+
+    scope_row = (
+        await db.execute(select(TaskScope).where(TaskScope.task_id == task.id))
+    ).scalar_one_or_none()
+
+    escrow = (
+        await db.execute(select(EscrowPayment).where(EscrowPayment.task_id == task.id))
+    ).scalar_one_or_none()
+
+    evidence = (
+        await db.execute(select(EvidenceUpload).where(EvidenceUpload.task_id == task.id).limit(1))
+    ).scalar_one_or_none()
+
+    verification = (
+        await db.execute(
+            select(VerificationResult)
+            .where(VerificationResult.task_id == task.id)
+            .order_by(VerificationResult.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    return TaskDetailResponse(
+        id=str(task.id),
+        poster_id=str(task.poster_id),
+        tasker_id=str(acceptance.tasker_id) if acceptance else None,
+        status=task.status.value,
+        category=task.category,
+        subcategory=task.subcategory,
+        task_schema=task.task_schema,
+        scope=_scope_to_response(scope_row) if scope_row else None,
+        escrow_status=escrow.status.value if escrow else None,
+        escrow_amount=str(escrow.amount) if escrow else None,
+        has_evidence=evidence is not None,
+        verification_status=verification.status.value if verification else None,
     )
 
 
@@ -226,6 +275,21 @@ async def tasks_feed(
     query = select(Task).where(Task.status == TaskStatus.PUBLISHED)
     if current_user.role == UserRole.POSTER:
         query = query.where(Task.poster_id == current_user.id)
+    if current_user.role == UserRole.TASKER:
+        profile = (
+            await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+        ).scalar_one_or_none()
+        service_pins = list(profile.service_pin_codes or []) if profile else []
+        if not service_pins:
+            return []
+        pin_clauses = [Task.task_schema["location"].astext.like(f"%{p}%") for p in service_pins]
+        query = query.where(or_(*pin_clauses))
+        if pin_norm:
+            if pin_norm not in service_pins:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="PIN not in your service areas — update profile",
+                )
     if category:
         query = query.where(Task.category == category)
     if pin_norm:
@@ -295,7 +359,7 @@ async def list_verifications_for_review(
     ]
 
 
-@router.get("/{task_id}", response_model=TaskFeedItem)
+@router.get("/{task_id}", response_model=TaskDetailResponse)
 async def get_task(
     task_id: str,
     db: AsyncSession = Depends(get_db),
@@ -303,10 +367,10 @@ async def get_task(
 ):
     task = await _get_task_or_404(db, task_id)
     if task.status == TaskStatus.PUBLISHED and current_user.role == UserRole.TASKER:
-        return _task_to_feed_item(task)
+        return await _task_to_detail(db, task)
     if not await _user_can_view_task(db, task, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
-    return _task_to_feed_item(task)
+    return await _task_to_detail(db, task)
 
 
 @router.get("/{task_id}/evidence", response_model=EvidenceDetailResponse | None)
@@ -475,7 +539,9 @@ async def verify_task_completion(
     if not evidence:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No evidence uploaded yet")
 
-    status_value, confidence, explanation = _mock_verification_status(evidence)
+    status_value, confidence, explanation, _provider = resolve_verification(
+        evidence, task_schema=task.task_schema
+    )
     verification = VerificationResult(
         task_id=task.id,
         status=status_value,
@@ -566,7 +632,18 @@ async def start_escrow(
             currency=escrow.currency,
         )
 
-    amount = task.suggested_price_max or task.suggested_price_min or Decimal("1000.00")
+    scope_row = (
+        await db.execute(
+            select(TaskScope).where(
+                TaskScope.task_id == task.id,
+                TaskScope.status == TaskScopeStatus.ACCEPTED,
+            )
+        )
+    ).scalar_one_or_none()
+    if scope_row:
+        amount = scope_row.agreed_price
+    else:
+        amount = task.suggested_price_max or task.suggested_price_min or Decimal("1000.00")
     escrow = EscrowPayment(task_id=task.id, status=EscrowStatus.HELD, amount=amount, currency="INR")
     db.add(escrow)
     await db.flush()
