@@ -1,6 +1,7 @@
 from app.models.task_draft import TaskDraft, TaskDraftStatus
 from app.models.chat import ChatMessage, ChatSession
 from app.models.task import AcceptanceStatus, Task, TaskAcceptance, TaskStatus
+from app.models.task_offer import CancelledBy, OfferStatus, TaskCancellation, TaskOffer
 from app.models.task import (
     Dispute,
     DisputeEvent,
@@ -71,5 +72,9 @@ __all__ = [
     "TaskScope",
     "TaskScopeStatus",
     "TaskThreadMessage",
+    "TaskOffer",
+    "OfferStatus",
+    "TaskCancellation",
+    "CancelledBy",
 ]
 

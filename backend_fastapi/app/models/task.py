@@ -50,6 +50,8 @@ class Task(Base):
     disputes = relationship("Dispute", back_populates="task", cascade="all, delete-orphan")
     scope = relationship("TaskScope", back_populates="task", uselist=False, cascade="all, delete-orphan")
     thread_messages = relationship("TaskThreadMessage", back_populates="task", cascade="all, delete-orphan")
+    offers = relationship("TaskOffer", back_populates="task", cascade="all, delete-orphan")
+    cancellation = relationship("TaskCancellation", back_populates="task", uselist=False, cascade="all, delete-orphan")
 
 
 class AcceptanceStatus(str, enum.Enum):
@@ -160,8 +162,13 @@ class EscrowPayment(Base):
     status: Mapped[EscrowStatus] = mapped_column(
         Enum(EscrowStatus, name="escrow_status"), default=EscrowStatus.HELD, nullable=False
     )
+    # amount is what the poster is charged (task_price + poster_fee).
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="INR", nullable=False)
+    # Fee breakdown; NULL on escrows created before service fees existed (amount == task price).
+    task_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    poster_fee: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    tasker_fee: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

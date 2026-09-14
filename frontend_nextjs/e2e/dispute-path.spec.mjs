@@ -3,7 +3,7 @@ import {
   uniqueEmail,
   registerUser,
   createPublishedTask,
-  acceptTask,
+  assignTaskViaOffer,
   startEscrow,
   openDispute,
   resolveDispute,
@@ -25,7 +25,7 @@ test.describe("Dispute path", () => {
     });
 
     const taskId = await createPublishedTask(request, poster.token);
-    await acceptTask(request, tasker.token, taskId);
+    await assignTaskViaOffer(request, { posterToken: poster.token, taskerToken: tasker.token, taskId });
     const escrow = await startEscrow(request, poster.token, taskId);
     expect(escrow.status).toMatch(/HELD|RELEASE_ELIGIBLE|RELEASED/);
 

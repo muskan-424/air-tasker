@@ -17,6 +17,21 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _assign_via_offer(client, poster_token: str, tasker_token: str, task_id: str, amount: float = 1500) -> None:
+    """Tasker makes an offer and the poster accepts it (replaces first-come accept)."""
+    offer = client.post(
+        f"/api/tasks/{task_id}/offers",
+        json={"amount": amount, "message": "Can do it today"},
+        headers=_auth(tasker_token),
+    )
+    assert offer.status_code == 200, offer.text
+    accepted = client.post(
+        f"/api/tasks/{task_id}/offers/{offer.json()['offer_id']}/accept",
+        headers=_auth(poster_token),
+    )
+    assert accepted.status_code == 200, accepted.text
+
+
 def _publish_task(client, poster_token: str) -> str:
     draft = client.post(
         "/api/tasks/drafts",
@@ -36,12 +51,7 @@ def _publish_task(client, poster_token: str) -> str:
 
 
 def _complete_task_for_rating(client, poster_token: str, tasker_token: str, task_id: str) -> None:
-    accept = client.post(
-        f"/api/tasks/{task_id}/accept",
-        json={"acknowledge_requirements": True, "acknowledgement": {"gear": "yes"}},
-        headers=_auth(tasker_token),
-    )
-    assert accept.status_code == 200, accept.text
+    _assign_via_offer(client, poster_token, tasker_token, task_id)
     escrow = client.post(f"/api/tasks/{task_id}/escrow/start", headers=_auth(poster_token))
     assert escrow.status_code == 200, escrow.text
     evidence = client.post(
@@ -117,12 +127,7 @@ def test_rate_task_before_release_rejected(client):
     tasker_token = _register(client, "TASKER")
     task_id = _publish_task(client, poster_token)
 
-    accept = client.post(
-        f"/api/tasks/{task_id}/accept",
-        json={"acknowledge_requirements": True},
-        headers=_auth(tasker_token),
-    )
-    assert accept.status_code == 200, accept.text
+    _assign_via_offer(client, poster_token, tasker_token, task_id)
 
     rate = client.post(
         f"/api/tasks/{task_id}/rate",

@@ -1,5 +1,4 @@
 import uuid
-from decimal import Decimal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -27,8 +26,12 @@ from app.models.task_rating import TaskRating
 from app.models.task_collaboration import TaskScope, TaskScopeStatus
 from app.models.user_profile import UserProfile
 from app.models.platform_security import NotificationCategory
-from app.models.user import User, UserRole
+from app.models.task_offer import OfferStatus, TaskCancellation, TaskOffer
+from app.models.user import User, UserRole, is_marketplace_user
+from app.core.config import settings
 from app.services.audit_service import write_audit
+from app.services.escrow_pricing import create_held_escrow
+from app.services.fee_service import compute_fees
 from app.services.notification_service import create_notification
 from app.services.task_lifecycle_notifications import (
     on_dispute_opened,
@@ -138,7 +141,7 @@ async def publish_task(
     )
 
 
-def _task_to_feed_item(task: Task) -> TaskFeedItem:
+def _task_to_feed_item(task: Task, *, my_relation: str | None = None) -> TaskFeedItem:
     return TaskFeedItem(
         id=str(task.id),
         poster_id=str(task.poster_id),
@@ -146,6 +149,7 @@ def _task_to_feed_item(task: Task) -> TaskFeedItem:
         category=task.category,
         subcategory=task.subcategory,
         task_schema=task.task_schema,
+        my_relation=my_relation,
     )
 
 
@@ -164,9 +168,20 @@ def _scope_to_response(scope: TaskScope) -> TaskScopeResponse:
     )
 
 
-async def _task_to_detail(db: AsyncSession, task: Task) -> TaskDetailResponse:
+async def _task_to_detail(db: AsyncSession, task: Task, viewer: User) -> TaskDetailResponse:
     acceptance = (
-        await db.execute(select(TaskAcceptance).where(TaskAcceptance.task_id == task.id))
+        await db.execute(
+            select(TaskAcceptance)
+            .where(TaskAcceptance.task_id == task.id)
+            .order_by(TaskAcceptance.accepted_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    offers = (await db.execute(select(TaskOffer).where(TaskOffer.task_id == task.id))).scalars().all()
+    my_offer = next((o for o in offers if o.tasker_id == viewer.id), None)
+    cancellation = (
+        await db.execute(select(TaskCancellation).where(TaskCancellation.task_id == task.id))
     ).scalar_one_or_none()
 
     scope_row = (
@@ -203,6 +218,16 @@ async def _task_to_detail(db: AsyncSession, task: Task) -> TaskDetailResponse:
         escrow_amount=str(escrow.amount) if escrow else None,
         has_evidence=evidence is not None,
         verification_status=verification.status.value if verification else None,
+        offer_count=sum(1 for o in offers if o.status in {OfferStatus.PENDING, OfferStatus.ACCEPTED}),
+        my_offer_id=str(my_offer.id) if my_offer else None,
+        my_offer_status=my_offer.status.value if my_offer else None,
+        my_offer_amount=str(my_offer.amount) if my_offer else None,
+        fees=compute_fees(scope_row.agreed_price).as_dict()
+        if scope_row and scope_row.status == TaskScopeStatus.ACCEPTED
+        else None,
+        cancelled_by=cancellation.cancelled_by.value if cancellation else None,
+        cancellation_reason=cancellation.reason if cancellation else None,
+        cancellation_fee=str(cancellation.fee_amount) if cancellation else None,
     )
 
 
@@ -229,33 +254,54 @@ async def _user_can_view_task(db: AsyncSession, task: Task, user: User) -> bool:
             TaskAcceptance.tasker_id == user.id,
         )
     )
-    return acceptance.scalar_one_or_none() is not None
+    if acceptance.scalar_one_or_none() is not None:
+        return True
+    offer = await db.execute(
+        select(TaskOffer.id).where(TaskOffer.task_id == task.id, TaskOffer.tasker_id == user.id)
+    )
+    return offer.scalar_one_or_none() is not None
 
 
 @router.get("/mine", response_model=list[TaskFeedItem])
 async def my_tasks(
+    view: str = Query(default="all", pattern="^(all|posted|working)$"),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Tasks owned by poster or accepted by tasker."""
-    if current_user.role == UserRole.TASKER:
-        query = (
-            select(Task)
-            .join(TaskAcceptance, TaskAcceptance.task_id == Task.id)
-            .where(TaskAcceptance.tasker_id == current_user.id)
-            .order_by(TaskAcceptance.accepted_at.desc())
-            .limit(limit)
-        )
-    else:
-        query = (
-            select(Task)
-            .where(Task.poster_id == current_user.id)
-            .order_by(Task.created_at.desc())
-            .limit(limit)
-        )
-    result = await db.execute(query)
-    return [_task_to_feed_item(task) for task in result.scalars().all()]
+    """Tasks you posted and tasks you are working on or have offered on (one account does both)."""
+    items: list[tuple[object, TaskFeedItem]] = []
+    if view in {"all", "posted"}:
+        posted = (
+            await db.execute(
+                select(Task).where(Task.poster_id == current_user.id).order_by(Task.created_at.desc()).limit(limit)
+            )
+        ).scalars().all()
+        items.extend((t.created_at, _task_to_feed_item(t, my_relation="poster")) for t in posted)
+    if view in {"all", "working"}:
+        assigned = (
+            await db.execute(
+                select(Task, TaskAcceptance.accepted_at)
+                .join(TaskAcceptance, TaskAcceptance.task_id == Task.id)
+                .where(TaskAcceptance.tasker_id == current_user.id)
+                .order_by(TaskAcceptance.accepted_at.desc())
+                .limit(limit)
+            )
+        ).all()
+        seen = {t.id for t, _ in assigned}
+        items.extend((at, _task_to_feed_item(t, my_relation="tasker")) for t, at in assigned)
+        offered = (
+            await db.execute(
+                select(Task, TaskOffer.updated_at)
+                .join(TaskOffer, TaskOffer.task_id == Task.id)
+                .where(TaskOffer.tasker_id == current_user.id, TaskOffer.status == OfferStatus.PENDING)
+                .order_by(TaskOffer.updated_at.desc())
+                .limit(limit)
+            )
+        ).all()
+        items.extend((ut, _task_to_feed_item(t, my_relation="offer")) for t, ut in offered if t.id not in seen)
+    items.sort(key=lambda pair: pair[0], reverse=True)
+    return [item for _, item in items[:limit]]
 
 
 @router.get("/feed", response_model=list[TaskFeedItem])
@@ -283,6 +329,7 @@ async def tasks_feed(
         service_pins = list(profile.service_pin_codes or []) if profile else []
         if not service_pins:
             return []
+        query = query.where(Task.poster_id != current_user.id)
         pin_clauses = [Task.task_schema["location"].astext.like(f"%{p}%") for p in service_pins]
         query = query.where(or_(*pin_clauses))
         if pin_norm:
@@ -367,11 +414,12 @@ async def get_task(
     current_user: User = Depends(get_current_user),
 ):
     task = await _get_task_or_404(db, task_id)
-    if task.status == TaskStatus.PUBLISHED and current_user.role == UserRole.TASKER:
-        return await _task_to_detail(db, task)
+    # Open tasks are browsable by any marketplace account so they can make an offer.
+    if task.status == TaskStatus.PUBLISHED and is_marketplace_user(current_user):
+        return await _task_to_detail(db, task, current_user)
     if not await _user_can_view_task(db, task, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this task")
-    return await _task_to_detail(db, task)
+    return await _task_to_detail(db, task, current_user)
 
 
 @router.get("/{task_id}/evidence", response_model=EvidenceDetailResponse | None)
@@ -418,7 +466,12 @@ async def accept_task(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid task_id")
 
-    if current_user.role != UserRole.TASKER:
+    if not settings.task_instant_accept_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Instant accept is disabled. Make an offer instead (POST /api/tasks/{task_id}/offers).",
+        )
+    if not is_marketplace_user(current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only taskers can accept tasks")
     if not payload.acknowledge_requirements:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Requirements must be acknowledged")
@@ -429,6 +482,8 @@ async def accept_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     if task.status != TaskStatus.PUBLISHED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task is not available for acceptance")
+    if task.poster_id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot accept your own task")
 
     existing = await db.execute(
         select(TaskAcceptance).where(
@@ -631,24 +686,16 @@ async def start_escrow(
             status=escrow.status.value,
             amount=str(escrow.amount),
             currency=escrow.currency,
+            fees=_escrow_fees(escrow),
         )
 
-    scope_row = (
-        await db.execute(
-            select(TaskScope).where(
-                TaskScope.task_id == task.id,
-                TaskScope.status == TaskScopeStatus.ACCEPTED,
-            )
+    if task.status not in {TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Escrow can only be started once a tasker is assigned",
         )
-    ).scalar_one_or_none()
-    if scope_row:
-        amount = scope_row.agreed_price
-    else:
-        amount = task.suggested_price_max or task.suggested_price_min or Decimal("1000.00")
-    escrow = EscrowPayment(task_id=task.id, status=EscrowStatus.HELD, amount=amount, currency="INR")
-    db.add(escrow)
-    await db.flush()
-    db.add(EscrowEvent(escrow_payment_id=escrow.id, type=EscrowEventType.HELD, metadata_json={"source": "mvp"}))
+
+    escrow = await create_held_escrow(db, task, source="mvp")
     await db.commit()
     await db.refresh(escrow)
 
@@ -670,7 +717,14 @@ async def start_escrow(
         status=escrow.status.value,
         amount=str(escrow.amount),
         currency=escrow.currency,
+        fees=_escrow_fees(escrow),
     )
+
+
+def _escrow_fees(escrow: EscrowPayment) -> dict[str, str] | None:
+    if escrow.task_price is None:
+        return None
+    return compute_fees(escrow.task_price).as_dict()
 
 
 @router.get("/{task_id}/disputes", response_model=list[DisputeListItem])

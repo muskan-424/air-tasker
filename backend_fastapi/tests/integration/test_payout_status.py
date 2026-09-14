@@ -9,11 +9,14 @@ def test_payout_status_endpoints(client):
     poster_login = client.post("/api/auth/login", json={"email": poster_email, "password": "secret123"})
     poster_token = poster_login.json()["access_token"]
 
-    denied = client.get(
+    # Poster-mode accounts can also work on tasks, so they may check payout status too.
+    poster_ok = client.get(
         "/api/payments/razorpay/payout/status",
         headers={"Authorization": f"Bearer {poster_token}"},
     )
-    assert denied.status_code == 403
+    assert poster_ok.status_code == 200
+    denied = client.get("/api/payments/razorpay/payout/status")
+    assert denied.status_code in {401, 403}
 
     tasker_email = "tasker_payout2@example.com"
     client.post("/api/auth/register", json={"email": tasker_email, "password": "secret123", "role": "TASKER"})

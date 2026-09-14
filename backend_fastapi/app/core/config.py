@@ -94,6 +94,21 @@ class Settings(BaseSettings):
     feature_flag_razorpay_checkout: bool = True
     feature_flag_disputes: bool = True
 
+    # Marketplace: offers, service fees, cancellation
+    # Legacy first-come /accept; production uses offers (tasker quotes, poster picks one).
+    task_instant_accept_enabled: bool = False
+    # Percent added on top of the task price and charged to the poster.
+    poster_service_fee_percent: float = 5.0
+    # Percent deducted from the task price before the tasker payout.
+    tasker_service_fee_percent: float = 10.0
+    # Floor applied to each non-zero service fee (INR).
+    service_fee_min_inr: float = 10.0
+    # Percent of the task price charged to whoever cancels after a tasker is assigned.
+    cancellation_fee_percent: float = 10.0
+    # Offer amount bounds (INR).
+    offer_min_inr: float = 100.0
+    offer_max_inr: float = 500000.0
+
     # Trust / fraud heuristics (Phase W)
     trust_cancel_window_days: int = 7
     trust_cancel_threshold: int = 3

@@ -4,12 +4,12 @@ import {
   registerUser,
   loginSession,
   createPublishedTask,
-  acceptTask,
+  assignTaskViaOffer,
   uploadEvidenceUrls,
 } from "./helpers/api.mjs";
 
 test.describe("Marketplace happy path", () => {
-  test("register → publish → accept → escrow → evidence → verify → release", async ({
+  test("register → publish → offer → escrow → evidence → verify → release", async ({
     page,
     request,
   }) => {
@@ -25,7 +25,7 @@ test.describe("Marketplace happy path", () => {
     });
 
     const taskId = await createPublishedTask(request, poster.token);
-    await acceptTask(request, tasker.token, taskId);
+    await assignTaskViaOffer(request, { posterToken: poster.token, taskerToken: tasker.token, taskId });
 
     // Poster locks escrow (Razorpay skipped when not configured)
     await loginSession(page, poster);

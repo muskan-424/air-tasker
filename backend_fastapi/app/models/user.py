@@ -16,6 +16,15 @@ class UserRole(str, enum.Enum):
     REVIEWER = "REVIEWER"
 
 
+# Marketplace accounts can both post tasks and work on them; `role` is only the
+# mode the app opens in. Staff roles (ADMIN, REVIEWER) do not take part in tasks.
+MARKETPLACE_ROLES = frozenset({UserRole.POSTER, UserRole.TASKER})
+
+
+def is_marketplace_user(user: "User") -> bool:
+    return user.role in MARKETPLACE_ROLES
+
+
 class User(Base):
     __tablename__ = "users"
 

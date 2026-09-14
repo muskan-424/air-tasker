@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 import uuid
+from decimal import Decimal
 from pathlib import Path
 
 from sqlalchemy import select
@@ -11,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.task import Task, TaskAcceptance, TaskStatus
 from app.models.task_draft import TaskDraft
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, is_marketplace_user
+from app.services.task_marketplace_service import MarketplaceError, submit_offer
 from app.schemas.chat import AgentChatResponse, AgentToolTrace, RagSourceItem
 from app.services.agent_confidence import confidence_for_response, confidence_from_tool_trace
 from app.services.gemini_chat_service import refine_with_gemini, synthesize_reply
@@ -217,7 +219,7 @@ class AgentChatService:
                 None,
             )
         return (
-            f"Task live ho gaya. task_id: {task.id}\nTaskers ab apply kar sakte hain.",
+            f"Task live ho gaya. task_id: {task.id}\nTaskers ab offers bhej sakte hain.",
             AgentToolTrace(name="publish_draft", used=True, details=f"task_id={task.id}"),
             str(task.id),
         )
@@ -336,15 +338,16 @@ class AgentChatService:
     async def _tool_apply_to_task(
         self, db: AsyncSession, user: User, message: str
     ) -> tuple[str, AgentToolTrace]:
-        if user.role != UserRole.TASKER:
+        """Make an offer on a task: amount from the message (e.g. "offer 1500"), else the suggested budget."""
+        if not is_marketplace_user(user):
             return (
-                "Apply action ke liye TASKER role required hai.",
+                "Offer karne ke liye tasker account chahiye.",
                 AgentToolTrace(name="apply_to_task", used=True, details="role_not_tasker"),
             )
         task_ids = re.findall(r"[0-9a-fA-F-]{36}", message)
         if not task_ids:
             return (
-                "Please task_id bhejo, fir main direct chatbot se apply karwa dunga.",
+                "Please task_id bhejo, fir main direct chatbot se offer bhej dunga.",
                 AgentToolTrace(name="apply_to_task", used=True, details="missing_task_id"),
             )
         try:
@@ -361,34 +364,31 @@ class AgentChatService:
                 "Ye task_id mujhe nahi mila.",
                 AgentToolTrace(name="apply_to_task", used=True, details="task_not_found"),
             )
-        if task.status != TaskStatus.PUBLISHED:
+
+        without_ids = re.sub(r"[0-9a-fA-F-]{36}", " ", message)
+        amounts = [Decimal(n) for n in re.findall(r"\d+(?:\.\d{1,2})?", without_ids.replace(",", ""))]
+        amount = next((a for a in amounts if a >= Decimal(str(settings.offer_min_inr))), None)
+        if amount is None:
+            amount = task.suggested_price_max or task.suggested_price_min
+        if amount is None:
             return (
-                "Ye task currently apply ke liye available nahi hai.",
-                AgentToolTrace(name="apply_to_task", used=True, details=f"status={task.status.value}"),
+                "Kitne rupaye mein karoge? Amount ke saath bhejo, jaise: offer 1500 <task_id>.",
+                AgentToolTrace(name="apply_to_task", used=True, details="missing_amount"),
             )
 
-        existing = (
-            await db.execute(
-                select(TaskAcceptance).where(TaskAcceptance.task_id == task.id, TaskAcceptance.tasker_id == user.id)
+        try:
+            offer, created = await submit_offer(
+                db, task.id, user, amount=Decimal(str(amount)), message="Sent via chat assistant"
             )
-        ).scalar_one_or_none()
-        if existing:
+        except MarketplaceError as e:
             return (
-                "Aap is task par already apply/accept kar chuke ho.",
-                AgentToolTrace(name="apply_to_task", used=True, details="already_applied"),
+                f"Offer nahi bhej paaya: {e}",
+                AgentToolTrace(name="apply_to_task", used=True, details=f"offer_{e.code}"),
             )
-
-        acceptance = TaskAcceptance(
-            task_id=task.id,
-            tasker_id=user.id,
-            acknowledgement={"source": "chatbot_apply"},
-        )
-        task.status = TaskStatus.ACCEPTED
-        db.add(acceptance)
-        await db.commit()
+        verb = "bhej diya" if created else "update kar diya"
         return (
-            f"Done. Aapka application accept ho gaya. task_id: {task.id}",
-            AgentToolTrace(name="apply_to_task", used=True, details="applied"),
+            f"Done. Aapka ₹{offer.amount} ka offer {verb}. Poster accept karega to task aapko assign ho jayega. task_id: {task.id}",
+            AgentToolTrace(name="apply_to_task", used=True, details="offer_submitted" if created else "offer_updated"),
         )
 
     async def respond(

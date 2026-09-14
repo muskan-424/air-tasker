@@ -17,6 +17,8 @@ class TaskFeedItem(BaseModel):
     category: str
     subcategory: str | None = None
     task_schema: dict
+    # Set on /api/tasks/mine: "poster", "tasker" (assigned), or "offer" (pending offer).
+    my_relation: str | None = None
 
 
 class AcceptTaskRequest(BaseModel):
@@ -68,6 +70,7 @@ class EscrowStartResponse(BaseModel):
     status: str
     amount: str
     currency: str
+    fees: dict[str, str] | None = None
 
 
 class DisputeCreateRequest(BaseModel):

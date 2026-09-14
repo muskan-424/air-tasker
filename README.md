@@ -21,6 +21,18 @@
   - **Automated KYC:** Facial recognition matching with Aadhaar/PAN.
   - **Outcome Verification:** Vision AI verifies "before" and "after" photos before escrow release.
 
+## 🤝 Marketplace flow
+
+1. **Post:** a poster publishes a task (AI drafts it from text, voice, or photos).
+2. **Offers:** taskers send a price and message (`POST /api/tasks/{id}/offers`); they can update or withdraw it while the task is open.
+3. **Assign:** the poster compares offers (price, rating, message) and accepts one (`POST /api/tasks/{id}/offers/{offer_id}/accept`). Other offers are declined and the offer price becomes the agreed scope.
+4. **Pay:** escrow holds the task price plus the poster service fee. On release the tasker is paid the task price minus the tasker service fee. `GET /api/tasks/fees/quote?price=` shows the breakdown.
+5. **Cancel:** `POST /api/tasks/{id}/cancel`. Free before assignment. After assignment the canceller pays `CANCELLATION_FEE_PERCENT` of the price: a poster's fee is kept from the escrow refund, while a tasker's fee is recorded against them and the poster is refunded in full. Verified or disputed work goes through disputes instead.
+
+**One account, both roles.** Any account can post tasks and make offers. `role` (`POSTER`/`TASKER`) is only the default view, switched with `PUT /api/users/me/mode`. `GET /api/tasks/mine?view=all|posted|working` lists both sides.
+
+Fees, limits, and the legacy instant accept are configured in `backend_fastapi/.env` (see `.env.example`).
+
 ## 💻 Tech Stack
 - **Backend:** Python, FastAPI
 - **Database:** PostgreSQL (with Alembic for migrations)

@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { tasksAPI } from "@/lib/api";
 import TaskThreadChat from "@/components/TaskThreadChat";
+import TaskOffersPanel from "@/components/TaskOffersPanel";
 
 const STEPS = [
   { key: "PUBLISHED", label: "Posted" },
@@ -37,7 +38,7 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [accepting, setAccepting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [scopePrice, setScopePrice] = useState("");
   const [scopeNote, setScopeNote] = useState("");
   const [scopeBusy, setScopeBusy] = useState(false);
@@ -69,15 +70,24 @@ export default function TaskDetailPage() {
     loadTask();
   }, [loadTask, isLoggedIn]);
 
-  const handleAccept = async () => {
-    setAccepting(true);
+  const handleCancel = async () => {
+    const assigned = task?.status !== "PUBLISHED";
+    const warning = assigned
+      ? "A tasker is already assigned, so a cancellation fee may apply. Cancel this task?"
+      : "Cancel this task? Any pending offers will be declined.";
+    if (!window.confirm(warning)) return;
+    const reason = window.prompt("Reason for cancelling (optional)") || null;
+    setCancelling(true);
     try {
-      await tasksAPI.accept(taskId);
+      const result = await tasksAPI.cancel(taskId, reason);
+      if (Number(result.fee_amount) > 0) {
+        alert(`Task cancelled. Cancellation fee: ₹${result.fee_amount}.`);
+      }
       await loadTask();
     } catch (err) {
-      alert(`Accept failed: ${err.message}`);
+      alert(`Cancel failed: ${err.message}`);
     } finally {
-      setAccepting(false);
+      setCancelling(false);
     }
   };
 
@@ -146,8 +156,14 @@ export default function TaskDetailPage() {
   const isTasker = user?.role === "TASKER";
   const isPoster = user?.id === task.poster_id;
   const isAssignedTasker = task.tasker_id && user?.id === task.tasker_id;
-  const canAccept = isTasker && task.status === "PUBLISHED";
-  const chatEnabled = task.status !== "PUBLISHED" && (isPoster || isAssignedTasker);
+  const isOpen = task.status === "PUBLISHED";
+  const isCancelled = task.status === "CANCELLED";
+  const isStaff = user?.role === "ADMIN" || user?.role === "REVIEWER";
+  const canCancel =
+    (isPoster && ["PUBLISHED", "ACCEPTED", "IN_PROGRESS"].includes(task.status)) ||
+    (isAssignedTasker && ["ACCEPTED", "IN_PROGRESS"].includes(task.status));
+  const chatEnabled = !isOpen && !isCancelled && (isPoster || isAssignedTasker);
+  const fees = task.fees;
   const currentStep = stepIndex(task.status);
   const scope = task.scope;
   const scopeAccepted = scope?.status === "ACCEPTED";
@@ -168,6 +184,14 @@ export default function TaskDetailPage() {
         <h1>{schema.title || task.subcategory || "Task"}</h1>
         <p className="desc">{schema.description || "No description provided."}</p>
 
+        {isCancelled && (
+          <div className="cancel-banner">
+            Cancelled by the {(task.cancelled_by || "poster").toLowerCase()}
+            {task.cancellation_reason ? `: ${task.cancellation_reason}` : "."}
+            {Number(task.cancellation_fee) > 0 && ` Cancellation fee ₹${task.cancellation_fee}.`}
+          </div>
+        )}
+
         <div className="timeline">
           {STEPS.map((step, idx) => (
             <div key={step.key} className={`tl-step ${idx <= currentStep ? "done" : ""} ${idx === currentStep ? "active" : ""}`}>
@@ -182,6 +206,9 @@ export default function TaskDetailPage() {
           <div><Timer size={16} /> {schema.estimated_duration_minutes || 60} min</div>
           {price.min != null && (
             <div><CreditCard size={16} /> ₹{price.min}–₹{price.max || price.min} suggested</div>
+          )}
+          {isOpen && task.offer_count > 0 && (
+            <div>{task.offer_count} offer{task.offer_count === 1 ? "" : "s"}</div>
           )}
           {scopeAccepted && (
             <div><CheckCircle2 size={16} /> Agreed ₹{scope.agreed_price}</div>
@@ -198,11 +225,23 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {task.status !== "PUBLISHED" && (
+        {isOpen && !isStaff && (
+          <TaskOffersPanel task={task} isPoster={isPoster} onChanged={loadTask} />
+        )}
+
+        {!isOpen && !isCancelled && (isPoster || isAssignedTasker) && (
           <section className="section scope-section">
             <h3>Price agreement</h3>
             {scopeAccepted ? (
-              <p className="scope-ok">Agreed price: <strong>₹{scope.agreed_price}</strong></p>
+              <div>
+                <p className="scope-ok">Agreed price: <strong>₹{scope.agreed_price}</strong></p>
+                {fees && isPoster && (
+                  <p className="muted">You pay ₹{fees.poster_total} (includes ₹{fees.poster_fee} service fee), held securely until the work is done.</p>
+                )}
+                {fees && isAssignedTasker && (
+                  <p className="muted">You receive ₹{fees.tasker_payout} after the ₹{fees.tasker_fee} service fee.</p>
+                )}
+              </div>
             ) : scopePending && isPoster ? (
               <div className="scope-pending">
                 <p>Tasker proposed <strong>₹{scope.agreed_price}</strong>{scope.note ? ` — ${scope.note}` : ""}</p>
@@ -227,18 +266,13 @@ export default function TaskDetailPage() {
                 </button>
               </div>
             ) : (
-              <p className="muted">Tasker will propose a final price after accepting.</p>
+              <p className="muted">The tasker will propose the final price.</p>
             )}
           </section>
         )}
 
         <div className="actions">
-          {canAccept && (
-            <button type="button" className="btn-premium btn-saffron" onClick={handleAccept} disabled={accepting}>
-              {accepting ? "Accepting..." : "Accept task"}
-            </button>
-          )}
-          {(isPoster || isAssignedTasker) && task.status !== "PUBLISHED" && (
+          {(isPoster || isAssignedTasker) && !isOpen && !isCancelled && (
             <>
               <Link href={`/verify?task_id=${task.id}`} className="btn-premium btn-teal action-link">
                 <ShieldCheck size={16} /> Upload proof
@@ -252,6 +286,11 @@ export default function TaskDetailPage() {
                 </Link>
               )}
             </>
+          )}
+          {canCancel && (
+            <button type="button" className="btn-premium btn-outline cancel-btn" onClick={handleCancel} disabled={cancelling}>
+              {cancelling ? "Cancelling..." : "Cancel task"}
+            </button>
           )}
         </div>
       </div>
@@ -286,6 +325,8 @@ export default function TaskDetailPage() {
         .muted { color: var(--color-text-muted); font-size: 0.88rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 8px; }
         .action-link { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+        .cancel-banner { padding: 10px 14px; border-radius: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; font-size: 0.88rem; }
+        .cancel-btn { margin-left: auto; }
         .error-banner { padding: 12px 16px; border-radius: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
         .empty-state { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--color-text-muted); padding: 48px; }
         :global(.spin-icon) { animation: spin 1s linear infinite; }
