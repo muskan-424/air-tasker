@@ -8,6 +8,8 @@ class UserMeResponse(BaseModel):
     email: str
     role: str
     email_verified_at: str | None = None
+    phone: str | None = None
+    phone_verified_at: str | None = None
 
 
 class UserModeUpdateRequest(BaseModel):

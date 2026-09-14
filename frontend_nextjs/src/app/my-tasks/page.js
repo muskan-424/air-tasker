@@ -104,7 +104,7 @@ Tasks you posted, tasks you're working on, and offers you've sent.
                 <p className="task-desc">{schema.description || "No description provided."}</p>
                 <div className="task-meta">
                   <MapPin size={14} />
-                  {schema.location || schema.location_pin || "India"}
+                  {schema.locationType === "REMOTE" ? "Remote" : (schema.location || "India")}
                 </div>
               </Link>
             );

@@ -52,6 +52,8 @@ async def get_me(current_user: User = Depends(get_current_user)):
         email=current_user.email,
         role=current_user.role.value,
         email_verified_at=current_user.email_verified_at.isoformat() if current_user.email_verified_at else None,
+        phone=current_user.phone,
+        phone_verified_at=current_user.phone_verified_at.isoformat() if current_user.phone_verified_at else None,
     )
 
 

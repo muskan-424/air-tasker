@@ -35,6 +35,7 @@ export default function TaskerRadar() {
   const [filterCategory, setFilterCategory] = useState("");
   const [pinInput, setPinInput] = useState("");
   const [activePin, setActivePin] = useState("");
+  const [remoteOnly, setRemoteOnly] = useState(false);
   const [pinSuccess, setPinSuccess] = useState(false);
 
   // ── Fetch tasks from backend ──────────────────────────────────────────────
@@ -43,7 +44,7 @@ export default function TaskerRadar() {
     setLoading(true);
     setApiError(null);
     try {
-      const data = await tasksAPI.feed(filterCategory || null, 20, activePin || null);
+      const data = await tasksAPI.feed(filterCategory || null, 20, activePin || null, remoteOnly ? "REMOTE" : null);
       setTasks(data);
     } catch (err) {
       setApiError(err.message);
@@ -51,7 +52,7 @@ export default function TaskerRadar() {
     } finally {
       setLoading(false);
     }
-  }, [isLoggedIn, filterCategory, activePin]);
+  }, [isLoggedIn, filterCategory, activePin, remoteOnly]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -201,6 +202,10 @@ export default function TaskerRadar() {
               {Object.keys(CATEGORY_COLORS).map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          <label className="remote-toggle">
+            <input type="checkbox" checked={remoteOnly} onChange={(e) => setRemoteOnly(e.target.checked)} />
+            Remote tasks only
+          </label>
 
           {/* PIN for real-world scenario */}
           <form onSubmit={handlePinSubmit} className="pin-form">
@@ -235,7 +240,9 @@ export default function TaskerRadar() {
           )}
           {tasks.map((task) => {
             const schema = task.task_schema || {};
-            const priceRange = schema.suggested_price_range || schema.suggestedPriceRange || {};
+            const priceRange = schema.suggestedPriceRange || {};
+            const isRemote = schema.locationType === "REMOTE";
+            const timing = schema.timing || {};
             const color = getColor(task.category);
             const isAcc = false;
             return (
@@ -261,18 +268,21 @@ export default function TaskerRadar() {
                 <h4 className="task-title">{schema.title || task.subcategory || "Task"}</h4>
 
                 <div className="task-meta">
-                  <span><MapPin style={{ width: 12, height: 12 }} /> {schema.location || task.task_schema?.location || "India"}</span>
-                  <span><Timer style={{ width: 12, height: 12 }} /> {schema.estimated_duration_minutes || 60} min</span>
+                  <span><MapPin style={{ width: 12, height: 12 }} /> {isRemote ? "Remote" : (schema.location || "India")}</span>
+                  <span><Timer style={{ width: 12, height: 12 }} /> {schema.estimatedDurationMinutes || 60} min</span>
                   {priceRange.min && (
                     <span><Layers style={{ width: 12, height: 12 }} /> ₹{priceRange.min}–₹{priceRange.max}</span>
+                  )}
+                  {timing.type && timing.type !== "FLEXIBLE" && timing.date && (
+                    <span>{timing.type === "BEFORE_DATE" ? "Before" : "On"} {timing.date}</span>
                   )}
                 </div>
 
                 {selected?.id === task.id && (
                   <div className="task-detail-expanded">
                     <p className="task-desc">{schema.description || "Task description from backend."}</p>
-                    {schema.completion_criteria && (
-                      <p><b>Completion:</b> {schema.completion_criteria}</p>
+                    {schema.completionCriteria && (
+                      <p><b>Completion:</b> {schema.completionCriteria}</p>
                     )}
                     <p className="task-id-label">ID: <code>{task.id}</code></p>
                     <Link href={`/tasks/${task.id}`} className="view-task-link" onClick={(e) => e.stopPropagation()}>
@@ -313,6 +323,7 @@ export default function TaskerRadar() {
         .canvas-wrapper { display: flex; justify-content: center; }
         .radar-canvas { border-radius: 50%; background: radial-gradient(circle, rgba(7,9,19,0.95) 0%, rgba(7,9,19,0.8) 100%); }
         .filter-row { display: flex; flex-direction: column; gap: 6px; }
+        .remote-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--color-text-muted); cursor: pointer; margin-top: 10px; }
         .filter-label { font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; }
         .category-select { background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 8px 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.9rem; outline: none; width: 100%; cursor: pointer; }
         .pin-form { display: flex; gap: 8px; }

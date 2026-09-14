@@ -8,8 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.platform_security import OtpChallenge, OtpPurpose
+from app.models.platform_security import OtpChallenge, OtpChannel, OtpPurpose
 from app.services.email_service import send_email
+from app.services.sms_service import send_sms
 
 
 def _hash_code(code: str) -> str:
@@ -23,14 +24,17 @@ def _generate_code() -> str:
 async def create_and_send_otp(
     db: AsyncSession,
     *,
-    email: str,
+    target: str,
     user_id,
     purpose: OtpPurpose,
+    channel: OtpChannel = OtpChannel.EMAIL,
 ) -> str:
     code = _generate_code()
     expires = datetime.now(timezone.utc) + timedelta(seconds=settings.otp_ttl_seconds)
+    normalized = target.lower().strip() if channel == OtpChannel.EMAIL else target.strip()
     row = OtpChallenge(
-        email=email.lower().strip(),
+        target=normalized,
+        channel=channel.value,
         user_id=user_id,
         purpose=purpose.value,
         code_hash=_hash_code(code),
@@ -39,35 +43,39 @@ async def create_and_send_otp(
     db.add(row)
     await db.commit()
 
-    subj = "Your VayuTask verification code"
-    if purpose == OtpPurpose.EMAIL_VERIFICATION:
-        body = (
-            f"Your email verification code is: {code}\n"
-            f"It expires in {settings.otp_ttl_seconds // 60} minutes.\n\n"
-            "Enter this code on the Account page in the app."
-        )
+    minutes = settings.otp_ttl_seconds // 60
+    if channel == OtpChannel.SMS:
+        body = f"Your VayuTask verification code is {code}. It expires in {minutes} minutes."
+        delivery = await send_sms(normalized, body)
     else:
-        body = (
-            f"Your security code is: {code}\n"
-            f"It expires in {settings.otp_ttl_seconds // 60} minutes."
-        )
-
-    delivery = await send_email(email, subj, body)
+        subj = "Your VayuTask verification code"
+        if purpose == OtpPurpose.EMAIL_VERIFICATION:
+            body = (
+                f"Your email verification code is: {code}\n"
+                f"It expires in {minutes} minutes.\n\n"
+                "Enter this code on the Account page in the app."
+            )
+        else:
+            body = f"Your security code is: {code}\nIt expires in {minutes} minutes."
+        delivery = await send_email(normalized, subj, body)
     return delivery
 
 
 async def verify_otp(
     db: AsyncSession,
     *,
-    email: str,
+    target: str,
     user_id,
     purpose: OtpPurpose,
     code: str,
+    channel: OtpChannel = OtpChannel.EMAIL,
 ) -> bool:
+    normalized = target.lower().strip() if channel == OtpChannel.EMAIL else target.strip()
     q = (
         select(OtpChallenge)
         .where(
-            OtpChallenge.email == email.lower().strip(),
+            OtpChallenge.target == normalized,
+            OtpChallenge.channel == channel.value,
             OtpChallenge.purpose == purpose.value,
             OtpChallenge.consumed_at.is_(None),
         )

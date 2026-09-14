@@ -308,6 +308,7 @@ async def my_tasks(
 async def tasks_feed(
     category: str | None = Query(default=None),
     pin: str | None = Query(default=None, max_length=10),
+    location_type: str | None = Query(default=None, pattern="^(IN_PERSON|REMOTE)$"),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -327,11 +328,15 @@ async def tasks_feed(
             await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
         ).scalar_one_or_none()
         service_pins = list(profile.service_pin_codes or []) if profile else []
-        if not service_pins:
-            return []
         query = query.where(Task.poster_id != current_user.id)
-        pin_clauses = [Task.task_schema["location"].astext.like(f"%{p}%") for p in service_pins]
-        query = query.where(or_(*pin_clauses))
+        # Remote tasks aren't bound by service PINs, so they show up regardless of area —
+        # even for a tasker who hasn't set any PINs yet.
+        is_remote = Task.task_schema["locationType"].astext == "REMOTE"
+        if service_pins:
+            pin_clauses = [Task.task_schema["location"].astext.like(f"%{p}%") for p in service_pins]
+            query = query.where(or_(is_remote, *pin_clauses))
+        else:
+            query = query.where(is_remote)
         if pin_norm:
             if pin_norm not in service_pins:
                 raise HTTPException(
@@ -342,6 +347,8 @@ async def tasks_feed(
         query = query.where(Task.category == category)
     if pin_norm:
         query = query.where(Task.task_schema["location"].astext.like(f"%{pin_norm}%"))
+    if location_type:
+        query = query.where(Task.task_schema["locationType"].astext == location_type)
     query = query.order_by(Task.created_at.desc()).limit(limit)
 
     result = await db.execute(query)

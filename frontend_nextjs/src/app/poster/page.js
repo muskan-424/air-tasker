@@ -24,10 +24,13 @@ export default function PosterSandbox() {
     requiredTools: [],
     estimatedDurationMinutes: 60,
     location: "",
+    locationType: "IN_PERSON",
+    timing: { type: "FLEXIBLE", date: null },
     completionCriteria: "",
     evidenceRequirements: "",
     suggestedPriceRange: { min: 600, max: 1200 },
   });
+  const [publishing, setPublishing] = useState(false);
 
   const processingSteps = [
     "Reading your description...",
@@ -150,6 +153,8 @@ export default function PosterSandbox() {
         requiredTools: Array.isArray(schema.requiredTools) ? schema.requiredTools : [],
         estimatedDurationMinutes: schema.estimatedDurationMinutes || 60,
         location: schema.location || "110001",
+        locationType: schema.locationType || "IN_PERSON",
+        timing: schema.timing || { type: "FLEXIBLE", date: null },
         completionCriteria: schema.completionCriteria || "Task completed as described.",
         evidenceRequirements: schema.evidenceRequirements || "Before and after photos required.",
         suggestedPriceRange: schema.suggestedPriceRange || { min: 600, max: 1200 },
@@ -162,15 +167,18 @@ export default function PosterSandbox() {
     }
   };
 
-  // ── Publish draft: POST /api/tasks/{draft_id}/publish ─────────────────────
+  // ── Publish draft: save edits, then POST /api/tasks/{draft_id}/publish ────
   const handlePublish = async () => {
-    if (!draftId) return;
+    if (!draftId || publishing) return;
     setApiError(null);
+    setPublishing(true);
     try {
+      await draftsAPI.update(draftId, draftSchema);
       const published = await tasksAPI.publish(draftId);
       window.location.href = `/tasks/${published.id}`;
     } catch (err) {
       setApiError(err.message);
+      setPublishing(false);
     }
   };
 
@@ -338,9 +346,54 @@ export default function PosterSandbox() {
                 </div>
                 <div className="form-row">
                   <label>PIN Code</label>
-                  <input type="text" value={draftSchema.location} onChange={(e) => setDraftSchema({ ...draftSchema, location: e.target.value })} />
+                  <input
+                    type="text"
+                    value={draftSchema.location}
+                    onChange={(e) => setDraftSchema({ ...draftSchema, location: e.target.value })}
+                    disabled={draftSchema.locationType === "REMOTE"}
+                    placeholder={draftSchema.locationType === "REMOTE" ? "Not needed for remote work" : ""}
+                  />
                 </div>
               </div>
+              <div className="form-row-group">
+                <div className="form-row">
+                  <label>Where</label>
+                  <select
+                    value={draftSchema.locationType}
+                    onChange={(e) => setDraftSchema({ ...draftSchema, locationType: e.target.value })}
+                  >
+                    <option value="IN_PERSON">In person</option>
+                    <option value="REMOTE">Remote</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label>When</label>
+                  <select
+                    value={draftSchema.timing?.type || "FLEXIBLE"}
+                    onChange={(e) => {
+                      const type = e.target.value;
+                      setDraftSchema({
+                        ...draftSchema,
+                        timing: { type, date: type === "FLEXIBLE" ? null : draftSchema.timing?.date || "" },
+                      });
+                    }}
+                  >
+                    <option value="FLEXIBLE">Flexible</option>
+                    <option value="ON_DATE">On a date</option>
+                    <option value="BEFORE_DATE">Before a date</option>
+                  </select>
+                </div>
+              </div>
+              {draftSchema.timing?.type !== "FLEXIBLE" && (
+                <div className="form-row">
+                  <label>{draftSchema.timing?.type === "BEFORE_DATE" ? "Deadline" : "Date"}</label>
+                  <input
+                    type="date"
+                    value={draftSchema.timing?.date || ""}
+                    onChange={(e) => setDraftSchema({ ...draftSchema, timing: { ...draftSchema.timing, date: e.target.value } })}
+                  />
+                </div>
+              )}
               <div className="form-row">
                 <label>Completion Criteria</label>
                 <textarea rows="3" value={draftSchema.completionCriteria} onChange={(e) => setDraftSchema({ ...draftSchema, completionCriteria: e.target.value })} />
@@ -361,7 +414,9 @@ export default function PosterSandbox() {
 
           <div className="draft-actions">
             <button onClick={() => { setStage("input"); setDraftId(null); }} className="btn-premium btn-outline">Discard & Re-draft</button>
-            <button onClick={handlePublish} className="btn-premium btn-teal">Publish Task to Radar →</button>
+            <button onClick={handlePublish} className="btn-premium btn-teal" disabled={publishing}>
+              {publishing ? "Publishing..." : "Publish Task to Radar →"}
+            </button>
           </div>
         </div>
       )}
@@ -423,8 +478,9 @@ export default function PosterSandbox() {
         .form-row-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .form-row { display: flex; flex-direction: column; gap: 8px; }
         .form-row label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 0.05em; }
-        .form-row input, .form-row textarea { background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none; }
-        .form-row input:focus, .form-row textarea:focus { border-color: var(--color-teal); }
+        .form-row input, .form-row select, .form-row textarea { background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none; }
+        .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--color-teal); }
+        .form-row input:disabled { opacity: 0.5; }
         .price-range-box { background: rgba(20,184,166,0.03); border: 1px dashed var(--border-teal); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .price-header { display: flex; justify-content: space-between; }
         .price-title { font-size: 0.85rem; font-weight: 600; color: var(--color-teal); }

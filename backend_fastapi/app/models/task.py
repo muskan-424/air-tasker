@@ -52,6 +52,7 @@ class Task(Base):
     thread_messages = relationship("TaskThreadMessage", back_populates="task", cascade="all, delete-orphan")
     offers = relationship("TaskOffer", back_populates="task", cascade="all, delete-orphan")
     cancellation = relationship("TaskCancellation", back_populates="task", uselist=False, cascade="all, delete-orphan")
+    questions = relationship("TaskQuestion", back_populates="task", cascade="all, delete-orphan")
 
 
 class AcceptanceStatus(str, enum.Enum):

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { BetaProvider } from "@/context/BetaContext";
@@ -25,6 +26,12 @@ export default function RootLayout({ children }) {
             <BetaBanner />
             <main className="main-wrapper">{children}</main>
           <footer className="footer-bar">
+            <nav className="footer-links">
+              <Link href="/legal/terms">Terms of Service</Link>
+              <Link href="/legal/privacy">Privacy Policy</Link>
+              <Link href="/legal/community-guidelines">Community Guidelines</Link>
+              <Link href="/legal/cancellation-policy">Cancellation Policy</Link>
+            </nav>
             <p>© 2026 VayuTask AI India. Secure gigs, made simple.</p>
           </footer>
           </BetaProvider>
@@ -43,6 +50,22 @@ export default function RootLayout({ children }) {
             color: var(--color-text-muted);
             font-size: 0.85rem;
             border-top: 1px solid var(--border-glow);
+          }
+          .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px 20px;
+            margin-bottom: 12px;
+          }
+          .footer-links a {
+            color: var(--color-text-muted);
+            font-size: 0.8rem;
+            text-decoration: none;
+          }
+          .footer-links a:hover {
+            color: var(--color-teal);
+            text-decoration: underline;
           }
         ` }} />
       </body>
