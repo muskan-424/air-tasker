@@ -144,14 +144,15 @@ def run_smoke(base_url: str) -> None:
     else:
         print("  skip prometheus /metrics (disabled)")
 
-    # Protected payout endpoint should reject poster role.
+    # Accounts can both post and work, so payout status is open to them but not to anonymous callers.
     _request(
         "GET",
         f"{base}/api/payments/razorpay/payout/status",
         headers={"Authorization": f"Bearer {token}"},
-        expected=(403,),
+        expected=(200,),
     )
-    print("  ok payments auth policy (poster denied payout status)")
+    _request("GET", f"{base}/api/payments/razorpay/payout/status", expected=(401, 403))
+    print("  ok payments auth policy (account allowed, anonymous denied)")
 
     print("Smoke checks passed.")
 

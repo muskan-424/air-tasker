@@ -24,12 +24,15 @@ os.environ.pop("GEMINI_API_KEY", None)
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.limiter import limiter
 from app.db.session import engine
 from app.main import app
 
 
 @pytest.fixture
 def client() -> TestClient:
+    # All TestClient requests share one IP; reset rate-limit counters so tests don't hit 429s.
+    limiter.reset()
     with TestClient(app) as c:
         yield c
 

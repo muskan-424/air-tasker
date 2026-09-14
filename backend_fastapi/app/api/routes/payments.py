@@ -9,8 +9,9 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.services.kyc_service import user_has_verified_kyc
 from app.db.session import get_db
-from app.models.task import EscrowEvent, EscrowEventType, EscrowPayment, EscrowStatus, Task
-from app.models.user import User, UserRole
+from app.models.task import EscrowEvent, EscrowEventType, EscrowPayment, EscrowStatus, Task, TaskStatus
+from app.models.user import User, UserRole, is_marketplace_user
+from app.services.escrow_pricing import create_held_escrow
 from app.schemas.payments import (
     EscrowPayoutInitiateRequest,
     EscrowPayoutInitiateResponse,
@@ -51,17 +52,12 @@ async def create_razorpay_order_for_task(
     escrow_result = await db.execute(select(EscrowPayment).where(EscrowPayment.task_id == task.id))
     escrow = escrow_result.scalar_one_or_none()
     if not escrow:
-        amount = task.suggested_price_max or task.suggested_price_min or Decimal("1000.00")
-        escrow = EscrowPayment(task_id=task.id, status=EscrowStatus.HELD, amount=amount, currency="INR")
-        db.add(escrow)
-        await db.flush()
-        db.add(
-            EscrowEvent(
-                escrow_payment_id=escrow.id,
-                type=EscrowEventType.HELD,
-                metadata_json={"source": "razorpay_order"},
+        if task.status not in {TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Escrow can only be funded once a tasker is assigned",
             )
-        )
+        escrow = await create_held_escrow(db, task, source="razorpay_order")
         await db.commit()
         await db.refresh(escrow)
 
@@ -161,7 +157,7 @@ async def get_payout_registration_status(
     current_user: User = Depends(get_current_user),
 ):
     """Tasker payout bank registration status (RazorpayX contact + fund account)."""
-    if current_user.role != UserRole.TASKER:
+    if not is_marketplace_user(current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only taskers can view payout status")
 
     user = (await db.execute(select(User).where(User.id == current_user.id))).scalar_one()
@@ -180,7 +176,7 @@ async def register_razorpay_payout_bank_account(
     current_user: User = Depends(get_current_user),
 ):
     """Tasker links an India bank account via RazorpayX contact + fund account (required before escrow payout)."""
-    if current_user.role != UserRole.TASKER:
+    if not is_marketplace_user(current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only taskers can register payout bank details")
 
     if not settings.razorpay_key_id or not settings.razorpay_key_secret:

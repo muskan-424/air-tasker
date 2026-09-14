@@ -110,21 +110,33 @@ export const tasksAPI = {
     return apiFetch(`/api/tasks/feed?${params.toString()}`);
   },
 
-  mine: (limit = 20) => apiFetch(`/api/tasks/mine?limit=${limit}`),
+  /** view: "all" | "posted" | "working" (assigned tasks and pending offers) */
+  mine: (limit = 20, view = "all") => apiFetch(`/api/tasks/mine?limit=${limit}&view=${view}`),
 
   get: (taskId) => apiFetch(`/api/tasks/${taskId}`),
 
-  accept: (taskId, acknowledgement = { confirmed: true }) =>
-    apiFetch(`/api/tasks/${taskId}/accept`, {
+  // Offers: taskers quote, the poster picks one.
+  listOffers: (taskId) => apiFetch(`/api/tasks/${taskId}/offers`),
+
+  makeOffer: (taskId, amount, message = null) =>
+    apiFetch(`/api/tasks/${taskId}/offers`, {
       method: "POST",
-      body: JSON.stringify({
-        acknowledge_requirements: true,
-        acknowledgement:
-          typeof acknowledgement === "object" && acknowledgement !== null
-            ? acknowledgement
-            : { note: String(acknowledgement) },
-      }),
+      body: JSON.stringify({ amount, message }),
     }),
+
+  acceptOffer: (taskId, offerId) =>
+    apiFetch(`/api/tasks/${taskId}/offers/${offerId}/accept`, { method: "POST" }),
+
+  withdrawOffer: (taskId, offerId) =>
+    apiFetch(`/api/tasks/${taskId}/offers/${offerId}/withdraw`, { method: "POST" }),
+
+  cancel: (taskId, reason = null) =>
+    apiFetch(`/api/tasks/${taskId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+
+  feeQuote: (price) => apiFetch(`/api/tasks/fees/quote?price=${encodeURIComponent(price)}`),
 
   uploadEvidence: (taskId, beforeImageUrl, afterImageUrl, evidenceVideoUrl = null) =>
     apiFetch(`/api/tasks/${taskId}/evidence`, {
@@ -361,6 +373,13 @@ export const profileAPI = {
 
 export const accountAPI = {
   me: () => apiFetch("/api/users/me"),
+
+  /** mode: "POSTER" | "TASKER" — every account can do both; this sets the default view. */
+  switchMode: (mode) =>
+    apiFetch("/api/users/me/mode", {
+      method: "PUT",
+      body: JSON.stringify({ mode }),
+    }),
 };
 
 export const onboardingAPI = {

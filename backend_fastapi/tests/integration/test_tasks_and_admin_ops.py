@@ -23,6 +23,21 @@ def _auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _assign_via_offer(client, poster_token: str, tasker_token: str, task_id: str, amount: float = 1500) -> None:
+    """Tasker makes an offer and the poster accepts it (replaces first-come accept)."""
+    offer = client.post(
+        f"/api/tasks/{task_id}/offers",
+        json={"amount": amount, "message": "Can do it today"},
+        headers=_auth_headers(tasker_token),
+    )
+    assert offer.status_code == 200, offer.text
+    accepted = client.post(
+        f"/api/tasks/{task_id}/offers/{offer.json()['offer_id']}/accept",
+        headers=_auth_headers(poster_token),
+    )
+    assert accepted.status_code == 200, accepted.text
+
+
 def _set_tasker_service_pins(client, tasker_token: str, pins: list[str]) -> None:
     resp = client.put(
         "/api/users/me/profile",
@@ -58,12 +73,7 @@ def test_task_happy_path_with_escrow_release(client, integration_env):
     assert feed.status_code == 200, feed.text
     assert any(row["id"] == task_id for row in feed.json())
 
-    accept = client.post(
-        f"/api/tasks/{task_id}/accept",
-        json={"acknowledge_requirements": True, "acknowledgement": {"gear": "yes"}},
-        headers=_auth_headers(tasker_token),
-    )
-    assert accept.status_code == 200, accept.text
+    _assign_via_offer(client, poster_token, tasker_token, task_id)
 
     escrow = client.post(f"/api/tasks/{task_id}/escrow/start", headers=_auth_headers(poster_token))
     assert escrow.status_code == 200, escrow.text
@@ -110,12 +120,7 @@ def test_dispute_open_and_admin_resolve(client, integration_env):
     _, _, admin_token = _register_and_token(client, role="ADMIN")
 
     task_id = _create_and_publish_task(client, poster_token)
-    accept = client.post(
-        f"/api/tasks/{task_id}/accept",
-        json={"acknowledge_requirements": True, "acknowledgement": {"ppe": "ok"}},
-        headers=_auth_headers(tasker_token),
-    )
-    assert accept.status_code == 200, accept.text
+    _assign_via_offer(client, poster_token, tasker_token, task_id)
     start_escrow = client.post(f"/api/tasks/{task_id}/escrow/start", headers=_auth_headers(poster_token))
     assert start_escrow.status_code == 200, start_escrow.text
 

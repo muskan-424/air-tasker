@@ -68,6 +68,17 @@ export function AuthProvider({ children }) {
     });
   };
 
+  /** Switch between posting and working mode (same account). */
+  const switchMode = async (mode) => {
+    const me = await accountAPI.switchMode(mode);
+    setUser((prev) => {
+      const next = { ...(prev || {}), role: me.role };
+      localStorage.setItem("vayutask_user", JSON.stringify(next));
+      return next;
+    });
+    return me;
+  };
+
   const _storeAuth = async (accessToken, userInfo) => {
     let decoded = userInfo;
     try {
@@ -97,7 +108,7 @@ export function AuthProvider({ children }) {
   const isLoggedIn = Boolean(token);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, isLoggedIn, login, register, logout, setUserVerified }}>
+    <AuthContext.Provider value={{ user, token, loading, isLoggedIn, login, register, logout, setUserVerified, switchMode }}>
       {children}
     </AuthContext.Provider>
   );

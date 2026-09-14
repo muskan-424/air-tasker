@@ -9,8 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.task import EscrowEvent, EscrowEventType, EscrowPayment, Task, TaskAcceptance
+from app.models.task import AcceptanceStatus, EscrowEvent, EscrowEventType, EscrowPayment, Task, TaskAcceptance
 from app.models.user import User
+from app.services.escrow_pricing import tasker_payout_amount
 from app.services.kyc_service import user_has_verified_kyc
 from app.services.metrics_service import inc
 from app.services.razorpay_service import create_contact, create_fund_account_bank, create_payout
@@ -39,7 +40,11 @@ async def try_escrow_payout_to_tasker(db: AsyncSession, task: Task, escrow: Escr
         logger.warning("RAZORPAY_PAYOUT_ACCOUNT_NUMBER not set; skipping payout for escrow %s", escrow.id)
         return "skipped_no_payout_account_config"
 
-    acc_row = await db.execute(select(TaskAcceptance).where(TaskAcceptance.task_id == task.id))
+    acc_row = await db.execute(
+        select(TaskAcceptance).where(
+            TaskAcceptance.task_id == task.id, TaskAcceptance.status == AcceptanceStatus.ACCEPTED
+        )
+    )
     acceptance = acc_row.scalar_one_or_none()
     if not acceptance:
         return "skipped_no_acceptance"
@@ -52,7 +57,7 @@ async def try_escrow_payout_to_tasker(db: AsyncSession, task: Task, escrow: Escr
         logger.info("Payout skipped: KYC not verified tasker_id=%s escrow=%s", tasker.id, escrow.id)
         return "skipped_kyc_not_verified"
 
-    amount_paise = int((escrow.amount * Decimal(100)).quantize(Decimal("1")))
+    amount_paise = int((tasker_payout_amount(escrow) * Decimal(100)).quantize(Decimal("1")))
     if amount_paise <= 0:
         return "skipped_zero_amount"
 

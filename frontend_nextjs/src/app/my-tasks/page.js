@@ -6,6 +6,8 @@ import { Briefcase, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { tasksAPI } from "@/lib/api";
 
+const RELATION_LABELS = { poster: "You posted", tasker: "You're working", offer: "Offer sent" };
+
 const STATUS_COLORS = {
   PUBLISHED: "#14b8a6",
   ACCEPTED: "#f59e0b",
@@ -50,7 +52,7 @@ export default function MyTasksPage() {
   }
 
   const isTasker = user?.role === "TASKER";
-  const title = isTasker ? "My Accepted Jobs" : "My Posted Tasks";
+  const title = "My Tasks";
 
   return (
     <main className="page-shell">
@@ -58,9 +60,7 @@ export default function MyTasksPage() {
         <div>
           <h1>{title}</h1>
           <p>
-            {isTasker
-              ? "Tasks you have accepted and are working on."
-              : "Tasks you created and published on VayuTask AI."}
+Tasks you posted, tasks you're working on, and offers you've sent.
           </p>
         </div>
         <button type="button" className="btn-premium btn-teal" onClick={loadTasks} disabled={loading}>
@@ -92,7 +92,10 @@ export default function MyTasksPage() {
             return (
               <Link key={task.id} href={`/tasks/${task.id}`} className="glass-card task-card">
                 <div className="task-card-top">
-                  <span className="cat-chip">{task.category || "General"}</span>
+                  <span className="cat-chip">
+                    {task.category || "General"}
+                    {task.my_relation && <span className="relation"> · {RELATION_LABELS[task.my_relation] || task.my_relation}</span>}
+                  </span>
                   <span className="status-chip" style={{ color: statusColor, borderColor: `${statusColor}55` }}>
                     {task.status}
                   </span>
@@ -120,6 +123,7 @@ export default function MyTasksPage() {
         .task-card { padding: 20px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 10px; }
         .task-card-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
         .cat-chip { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--color-teal); }
+        .relation { color: var(--color-text-muted); font-weight: 600; text-transform: none; }
         .status-chip { font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid; }
         .task-card h3 { font-size: 1.05rem; font-weight: 700; }
         .task-desc { font-size: 0.85rem; color: var(--color-text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

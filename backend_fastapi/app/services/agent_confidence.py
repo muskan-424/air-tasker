@@ -30,11 +30,9 @@ def confidence_from_tool_trace(trace: AgentToolTrace) -> float:
         return 0.86
 
     if name == "apply_to_task":
-        if "applied" in d:
+        if "offer_submitted" in d or "offer_updated" in d:
             return 0.95
-        if "already_applied" in d:
-            return 0.88
-        if "role_not_tasker" in d or "missing_task_id" in d or "invalid_task_id" in d:
+        if "role_not_tasker" in d or "missing_task_id" in d or "invalid_task_id" in d or "missing_amount" in d:
             return 0.35
         if "task_not_found" in d or "status=" in d:
             return 0.4

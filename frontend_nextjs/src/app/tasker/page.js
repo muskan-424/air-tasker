@@ -23,7 +23,7 @@ function getColor(category) {
 }
 
 export default function TaskerRadar() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user, switchMode } = useAuth();
   const canvasRef = useRef(null);
   const animFrameRef = useRef(null);
   const angleRef = useRef(0);
@@ -31,8 +31,6 @@ export default function TaskerRadar() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
-  const [acceptedIds, setAcceptedIds] = useState(new Set());
-  const [acceptingId, setAcceptingId] = useState(null);
   const [selected, setSelected] = useState(null);
   const [filterCategory, setFilterCategory] = useState("");
   const [pinInput, setPinInput] = useState("");
@@ -71,20 +69,11 @@ export default function TaskerRadar() {
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-  // ── Accept task: POST /api/tasks/{task_id}/accept ─────────────────────────
-  const handleAccept = async (taskId, e) => {
+  // ── Offers are made on the task page, where the poster compares them ──────
+  const handleOffer = (taskId, e) => {
     e.stopPropagation();
     if (!isLoggedIn) { window.location.href = "/login"; return; }
-    setAcceptingId(taskId);
-    try {
-      await tasksAPI.accept(taskId);
-      setAcceptedIds((prev) => new Set([...prev, taskId]));
-      window.location.href = `/tasks/${taskId}`;
-    } catch (err) {
-      alert(`Accept failed: ${err.message}`);
-    } finally {
-      setAcceptingId(null);
-    }
+    window.location.href = `/tasks/${taskId}`;
   };
 
   // ── Radar canvas animation ────────────────────────────────────────────────
@@ -134,16 +123,10 @@ export default function TaskerRadar() {
         const x = cx + R * dist * Math.cos(angle);
         const y = cy + R * dist * Math.sin(angle);
         const color = getColor(task.category).ring;
-        const isAcc = acceptedIds.has(task.id);
         ctx.beginPath();
-        ctx.arc(x, y, isAcc ? 8 : 5, 0, Math.PI * 2);
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
         ctx.fillStyle = color;
         ctx.fill();
-        if (isAcc) {
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
       });
 
       angleRef.current += 0.02;
@@ -151,7 +134,7 @@ export default function TaskerRadar() {
     };
     draw();
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [tasks, acceptedIds]);
+  }, [tasks]);
 
   // ── PIN unlock simulation ─────────────────────────────────────────────────
   const handlePinSubmit = (e) => {
@@ -172,7 +155,21 @@ export default function TaskerRadar() {
 
       {!isLoggedIn && (
         <div className="auth-warning">
-          <AlertTriangle className="warn-icon" /> <span>You must <a href="/login">sign in</a> as a Tasker to accept tasks.</span>
+          <AlertTriangle className="warn-icon" /> <span>You must <a href="/login">sign in</a> to make offers on tasks.</span>
+        </div>
+      )}
+
+      {isLoggedIn && user?.role === "POSTER" && (
+        <div className="auth-warning">
+          <AlertTriangle className="warn-icon" />
+          <span>You're in posting mode, so this list shows your own open tasks.</span>
+          <button
+            type="button"
+            className="btn-premium btn-teal"
+            onClick={() => switchMode("TASKER").then(fetchTasks).catch((err) => alert(err.message))}
+          >
+            Switch to working
+          </button>
         </div>
       )}
 
@@ -240,8 +237,7 @@ export default function TaskerRadar() {
             const schema = task.task_schema || {};
             const priceRange = schema.suggested_price_range || schema.suggestedPriceRange || {};
             const color = getColor(task.category);
-            const isAcc = acceptedIds.has(task.id);
-            const isAccepting = acceptingId === task.id;
+            const isAcc = false;
             return (
               <div
                 key={task.id}
@@ -287,16 +283,11 @@ export default function TaskerRadar() {
 
                 {!isAcc && (
                   <div className="task-card-actions">
-                    <div className="checklist-items">
-                      <label className="check-item"><input type="checkbox" defaultChecked /> I have the required tools</label>
-                      <label className="check-item"><input type="checkbox" defaultChecked /> I can meet the location</label>
-                    </div>
                     <button
-                      onClick={(e) => handleAccept(task.id, e)}
-                      disabled={isAccepting}
+                      onClick={(e) => handleOffer(task.id, e)}
                       className="btn-premium btn-saffron accept-btn"
                     >
-                      {isAccepting ? "Accepting..." : "Accept & Proceed →"}
+                      Make an offer →
                     </button>
                   </div>
                 )}

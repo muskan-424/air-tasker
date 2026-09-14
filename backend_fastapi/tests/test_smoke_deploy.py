@@ -37,8 +37,11 @@ def test_smoke_task_flow_via_test_client(client):
     assert pub.status_code == 200
     assert pub.json()["status"].upper() == "PUBLISHED"
 
-    denied = client.get(
+    # One account can post and work, so a poster-mode account may check payout status.
+    allowed = client.get(
         "/api/payments/razorpay/payout/status",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert denied.status_code == 403
+    assert allowed.status_code == 200
+    denied = client.get("/api/payments/razorpay/payout/status")
+    assert denied.status_code in {401, 403}

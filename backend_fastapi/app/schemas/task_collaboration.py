@@ -52,3 +52,11 @@ class TaskDetailResponse(BaseModel):
     escrow_amount: str | None = None
     has_evidence: bool = False
     verification_status: str | None = None
+    offer_count: int = 0
+    my_offer_id: str | None = None
+    my_offer_status: str | None = None
+    my_offer_amount: str | None = None
+    fees: dict[str, str] | None = None
+    cancelled_by: str | None = None
+    cancellation_reason: str | None = None
+    cancellation_fee: str | None = None

@@ -260,7 +260,7 @@ export default function PosterSandbox() {
               {[
                 { icon: <FileText />, title: "Describe your task", desc: "Type or speak in Hindi, English, or Hinglish. Mention category words (electrical, plumbing) and your 6-digit PIN." },
                 { icon: <ListChecks />, title: "Review the draft", desc: "AI suggests title, budget, tools, and evidence needs. Edit anything before you publish." },
-                { icon: <MapPin />, title: "Publish to nearby taskers", desc: "Once published, verified taskers in your area can accept and start work." },
+                { icon: <MapPin />, title: "Publish to nearby taskers", desc: "Once published, taskers in your area send offers. Compare prices and reviews, then pick one." },
               ].map((b, i) => (
                 <div key={i} className="info-bullet">
                   <div className="bullet-icon-box">{b.icon}</div>

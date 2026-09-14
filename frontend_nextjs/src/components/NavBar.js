@@ -34,7 +34,7 @@ const NAV_LINKS = [
 ];
 
 export default function NavBar() {
-  const { user, token, isLoggedIn, logout } = useAuth();
+  const { user, token, isLoggedIn, logout, switchMode } = useAuth();
   const { config: betaConfig } = useBeta();
   const pathname = usePathname();
   const navLinks = NAV_LINKS.filter((link) => isNavEnabled(link.href, betaConfig.feature_flags));
@@ -519,6 +519,28 @@ export default function NavBar() {
                       <span className="vt-dropdown-role">{user?.role || "GUEST"} ACCOUNT</span>
                     </div>
                     
+                    {(user?.role === "POSTER" || user?.role === "TASKER") && (
+                      <>
+                        <div className="vt-dropdown-divider"></div>
+                        <div className="vt-user-status-selector" aria-label="Account mode">
+                          {[
+                            { mode: "POSTER", label: "Posting" },
+                            { mode: "TASKER", label: "Working" },
+                          ].map(({ mode, label }) => (
+                            <button
+                              key={mode}
+                              className={`vt-status-selector-btn ${user.role === mode ? "vt-status-selector-btn-active" : ""}`}
+                              onClick={() => {
+                                if (user.role !== mode) switchMode(mode).catch((err) => alert(err.message));
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
                     {/* Interactive status toggles */}
                     <div className="vt-dropdown-divider"></div>
                     <div className="vt-user-status-selector">

@@ -56,7 +56,7 @@ export default function TaskThreadChat({ taskId, userId, enabled }) {
   if (!enabled) {
     return (
       <div className="thread-chat disabled">
-        <p>Chat opens after a tasker accepts this job.</p>
+        <p>Chat opens once the poster accepts an offer.</p>
       </div>
     );
   }

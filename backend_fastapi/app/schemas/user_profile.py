@@ -10,6 +10,10 @@ class UserMeResponse(BaseModel):
     email_verified_at: str | None = None
 
 
+class UserModeUpdateRequest(BaseModel):
+    mode: str = Field(pattern="^(POSTER|TASKER)$")
+
+
 class UserProfileResponse(BaseModel):
     user_id: str
     display_name: str | None = None

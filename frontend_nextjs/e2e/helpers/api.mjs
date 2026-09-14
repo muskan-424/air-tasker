@@ -65,13 +65,21 @@ export async function createPublishedTask(request, posterToken, rawInput) {
   return (await publishRes.json()).id;
 }
 
-export async function acceptTask(request, taskerToken, taskId) {
-  const res = await request.post(`${API_BASE}/api/tasks/${taskId}/accept`, {
+/** Tasker makes an offer and the poster accepts it, assigning the task. */
+export async function assignTaskViaOffer(request, { posterToken, taskerToken, taskId, amount = 1500 }) {
+  const offerRes = await request.post(`${API_BASE}/api/tasks/${taskId}/offers`, {
     headers: authHeaders(taskerToken),
-    data: { acknowledge_requirements: true, acknowledgement: { gear: "yes" } },
+    data: { amount, message: "E2E offer" },
   });
-  if (!res.ok()) {
-    throw new Error(`accept failed (${res.status()}): ${await res.text()}`);
+  if (!offerRes.ok()) {
+    throw new Error(`offer failed (${offerRes.status()}): ${await offerRes.text()}`);
+  }
+  const { offer_id: offerId } = await offerRes.json();
+  const acceptRes = await request.post(`${API_BASE}/api/tasks/${taskId}/offers/${offerId}/accept`, {
+    headers: authHeaders(posterToken),
+  });
+  if (!acceptRes.ok()) {
+    throw new Error(`offer accept failed (${acceptRes.status()}): ${await acceptRes.text()}`);
   }
 }
 
