@@ -7,10 +7,15 @@ import { draftsAPI, tasksAPI } from "@/lib/api";
 
 function defaultSchema(schema = {}) {
   return {
+    // Keep every AI-derived field (completionCriteria, evidenceRequirements, etc.) so editing
+    // here doesn't silently drop them from the published task.
+    ...schema,
     category: schema.category || "General Service",
     title: schema.title || "",
     description: schema.description || "",
     location: schema.location || "",
+    locationType: schema.locationType || "IN_PERSON",
+    timing: schema.timing || { type: "FLEXIBLE", date: null },
     suggestedPriceRange: schema.suggestedPriceRange || { min: 600, max: 1200 },
   };
 }
@@ -33,6 +38,14 @@ export default function TaskDraftReviewCard({ draftId, initialSchema, onPublishe
         [key]: Number(value) || 0,
       },
     }));
+  };
+
+  const updateTiming = (patch) => {
+    setSchema((prev) => ({ ...prev, timing: { ...prev.timing, ...patch } }));
+  };
+
+  const setTimingType = (type) => {
+    updateTiming({ type, date: type === "FLEXIBLE" ? null : schema.timing?.date || "" });
   };
 
   const handlePublish = async () => {
@@ -83,8 +96,38 @@ export default function TaskDraftReviewCard({ draftId, initialSchema, onPublishe
         </label>
         <label>
           PIN / Location
-          <input value={schema.location} onChange={(e) => updateField("location", e.target.value)} />
+          <input
+            value={schema.location}
+            onChange={(e) => updateField("location", e.target.value)}
+            disabled={schema.locationType === "REMOTE"}
+            placeholder={schema.locationType === "REMOTE" ? "Not needed for remote work" : ""}
+          />
         </label>
+        <label>
+          Where
+          <select value={schema.locationType} onChange={(e) => updateField("locationType", e.target.value)}>
+            <option value="IN_PERSON">In person</option>
+            <option value="REMOTE">Remote</option>
+          </select>
+        </label>
+        <label>
+          When
+          <select value={schema.timing?.type || "FLEXIBLE"} onChange={(e) => setTimingType(e.target.value)}>
+            <option value="FLEXIBLE">Flexible</option>
+            <option value="ON_DATE">On a date</option>
+            <option value="BEFORE_DATE">Before a date</option>
+          </select>
+        </label>
+        {schema.timing?.type !== "FLEXIBLE" && (
+          <label>
+            {schema.timing?.type === "BEFORE_DATE" ? "Deadline" : "Date"}
+            <input
+              type="date"
+              value={schema.timing?.date || ""}
+              onChange={(e) => updateTiming({ date: e.target.value })}
+            />
+          </label>
+        )}
         <label className="full-width">
           Title
           <input value={schema.title} onChange={(e) => updateField("title", e.target.value)} />
@@ -174,6 +217,7 @@ export default function TaskDraftReviewCard({ draftId, initialSchema, onPublishe
           grid-column: 1 / -1;
         }
         .draft-review-grid input,
+        .draft-review-grid select,
         .draft-review-grid textarea {
           background: rgba(7, 9, 19, 0.5);
           border: 1px solid var(--border-glow);
@@ -182,6 +226,9 @@ export default function TaskDraftReviewCard({ draftId, initialSchema, onPublishe
           color: var(--color-text-main);
           font-family: inherit;
           font-size: 0.88rem;
+        }
+        .draft-review-grid input:disabled {
+          opacity: 0.5;
         }
         .draft-review-error {
           color: #fca5a5;

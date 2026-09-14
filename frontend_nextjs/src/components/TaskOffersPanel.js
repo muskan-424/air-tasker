@@ -20,7 +20,7 @@ export default function TaskOffersPanel({ task, isPoster, onChanged }) {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
-  const range = task.task_schema?.suggested_price_range || {};
+  const range = task.task_schema?.suggestedPriceRange || {};
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
   const [quote, setQuote] = useState(null);

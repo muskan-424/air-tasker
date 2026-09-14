@@ -11,7 +11,13 @@ from app.db.base import Base
 
 class OtpPurpose(str, enum.Enum):
     EMAIL_VERIFICATION = "EMAIL_VERIFICATION"
+    PHONE_VERIFICATION = "PHONE_VERIFICATION"
     SENSITIVE_ACTION = "SENSITIVE_ACTION"
+
+
+class OtpChannel(str, enum.Enum):
+    EMAIL = "EMAIL"
+    SMS = "SMS"
 
 
 class NotificationCategory(str, enum.Enum):
@@ -25,7 +31,9 @@ class OtpChallenge(Base):
     __tablename__ = "otp_challenges"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    # The address the code was sent to: an email address (channel=EMAIL) or an India phone number (channel=SMS).
+    target: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    channel: Mapped[str] = mapped_column(String(10), default=OtpChannel.EMAIL.value, nullable=False)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )

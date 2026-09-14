@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { Sparkles, LogIn, UserPlus, Mail, Lock, Shield } from "lucide-react";
 
@@ -10,12 +11,17 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("POSTER");
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    if (tab === "register" && !agreed) {
+      setError("Please agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
     setLoading(true);
     try {
       if (tab === "login") {
@@ -114,7 +120,21 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
+              <p className="role-hint">You can switch between posting and working anytime from your account menu.</p>
             </div>
+          )}
+
+          {/* Terms agreement — only for registration */}
+          {tab === "register" && (
+            <label className="agree-row">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+              <span>
+                I agree to the{" "}
+                <Link href="/legal/terms" target="_blank">Terms of Service</Link>,{" "}
+                <Link href="/legal/privacy" target="_blank">Privacy Policy</Link>, and{" "}
+                <Link href="/legal/community-guidelines" target="_blank">Community Guidelines</Link>.
+              </span>
+            </label>
           )}
 
           {/* Error display */}
@@ -293,6 +313,28 @@ export default function LoginPage() {
           display: flex;
           flex-direction: column;
           gap: 10px;
+        }
+        .role-hint {
+          font-size: 0.75rem;
+          color: var(--color-text-muted);
+          margin-top: 6px;
+        }
+        .agree-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          font-size: 0.78rem;
+          line-height: 1.5;
+          color: var(--color-text-muted);
+          cursor: pointer;
+        }
+        .agree-row input {
+          margin-top: 2px;
+          flex-shrink: 0;
+        }
+        .agree-row :global(a) {
+          color: var(--color-teal);
+          text-decoration: underline;
         }
         .role-option {
           display: flex;

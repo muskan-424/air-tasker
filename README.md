@@ -33,6 +33,23 @@
 
 Fees, limits, and the legacy instant accept are configured in `backend_fastapi/.env` (see `.env.example`).
 
+**Task discovery.** A task's `task_schema` carries `locationType` (`IN_PERSON`/`REMOTE`) and `timing`
+(`{type: FLEXIBLE|ON_DATE|BEFORE_DATE, date}`), set by the AI drafter or edited before publish. Remote
+tasks show in every tasker's feed regardless of service-area PIN; `GET /api/tasks/feed?location_type=REMOTE`
+filters to them.
+
+**Public questions.** Anyone can ask a question on an open task (`POST /api/tasks/{id}/questions`); only
+the poster can answer (`POST /api/tasks/{id}/questions/{question_id}/answer`). Questions close once a
+tasker is assigned.
+
+**Phone verification.** `POST /api/verification/phone/request-otp` (optional `phone` to set/update it) and
+`/phone/verify` mirror the email OTP flow over SMS — see `SMS_GATEWAY_URL` in `.env.example` (codes log to
+the terminal until a gateway is wired up).
+
+**Legal pages.** Draft Terms of Service, Privacy Policy, Community Guidelines, and Cancellation Policy live
+under `/legal/*` in the frontend and are linked from the footer and the registration form. They need a
+legal review before go-live — see the banner on each page.
+
 ## 💻 Tech Stack
 - **Backend:** Python, FastAPI
 - **Database:** PostgreSQL (with Alembic for migrations)

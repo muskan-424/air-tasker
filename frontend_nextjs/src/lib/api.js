@@ -103,10 +103,11 @@ export const tasksAPI = {
   publish: (draftId) =>
     apiFetch(`/api/tasks/${draftId}/publish`, { method: "POST" }),
 
-  feed: (category = null, limit = 20, pin = null) => {
+  feed: (category = null, limit = 20, pin = null, locationType = null) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (category) params.set("category", category);
     if (pin) params.set("pin", pin);
+    if (locationType) params.set("location_type", locationType);
     return apiFetch(`/api/tasks/feed?${params.toString()}`);
   },
 
@@ -137,6 +138,21 @@ export const tasksAPI = {
     }),
 
   feeQuote: (price) => apiFetch(`/api/tasks/fees/quote?price=${encodeURIComponent(price)}`),
+
+  // Public Q&A on an open task.
+  listQuestions: (taskId) => apiFetch(`/api/tasks/${taskId}/questions`),
+
+  askQuestion: (taskId, question) =>
+    apiFetch(`/api/tasks/${taskId}/questions`, {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }),
+
+  answerQuestion: (taskId, questionId, answer) =>
+    apiFetch(`/api/tasks/${taskId}/questions/${questionId}/answer`, {
+      method: "POST",
+      body: JSON.stringify({ answer }),
+    }),
 
   uploadEvidence: (taskId, beforeImageUrl, afterImageUrl, evidenceVideoUrl = null) =>
     apiFetch(`/api/tasks/${taskId}/evidence`, {
@@ -397,6 +413,19 @@ export const verificationAPI = {
     apiFetch("/api/verification/email/verify", {
       method: "POST",
       body: JSON.stringify({ purpose, code }),
+    }),
+
+  /** phone: omit to resend to the phone already on file; pass to set/update it first. */
+  requestPhoneOtp: (phone = null) =>
+    apiFetch("/api/verification/phone/request-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+
+  verifyPhoneOtp: (code) =>
+    apiFetch("/api/verification/phone/verify", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     }),
 };
 

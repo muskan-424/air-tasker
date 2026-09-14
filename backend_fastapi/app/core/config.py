@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     email_from: str | None = None
 
+    # SMS OTP (stub if not set — no India gateway wired up yet)
+    sms_gateway_url: str | None = None
+
     # Redis (optional cache)
     redis_url: str | None = None
 

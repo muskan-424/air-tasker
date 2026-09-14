@@ -1,8 +1,43 @@
 from __future__ import annotations
 
 import re
+from datetime import date, timedelta
 
 from app.services.gemini_task_schema_service import build_task_schema_with_gemini, normalize_task_schema
+
+_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b")
+
+
+def _detect_location_type(low: str) -> str:
+    if any(w in low for w in ["remote", "online", "video call", "phone call", "whatsapp", "wfh"]):
+        return "REMOTE"
+    return "IN_PERSON"
+
+
+def _detect_timing(low: str) -> dict:
+    """Best-effort date detection from free text; defaults to FLEXIBLE when nothing is found."""
+    is_deadline = any(w in low for w in ["before", "by ", "deadline", "due"])
+
+    if "today" in low or " aaj" in f" {low}":
+        d = date.today()
+    elif "tomorrow" in low or " kal" in f" {low}":
+        d = date.today() + timedelta(days=1)
+    else:
+        m = _DATE_RE.search(low)
+        if m:
+            day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if year < 100:
+                year += 2000
+            try:
+                d = date(year, month, day)
+            except ValueError:
+                d = None
+        else:
+            d = None
+
+    if d is None:
+        return {"type": "FLEXIBLE", "date": None}
+    return {"type": "BEFORE_DATE" if is_deadline else "ON_DATE", "date": d.isoformat()}
 
 
 def build_ai_schema_from_message(text: str) -> dict:
@@ -44,6 +79,8 @@ def build_ai_schema_from_message(text: str) -> dict:
         "language": lang,
         "category": category,
         "urgencyLevel": urgency,
+        "locationType": _detect_location_type(low),
+        "timing": _detect_timing(low),
         "suggestedPriceRange": {"min": min_p, "max": max_p, "currency": "INR"},
     }
 

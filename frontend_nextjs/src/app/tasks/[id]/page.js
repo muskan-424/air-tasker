@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { tasksAPI } from "@/lib/api";
 import TaskThreadChat from "@/components/TaskThreadChat";
 import TaskOffersPanel from "@/components/TaskOffersPanel";
+import TaskQuestionsPanel from "@/components/TaskQuestionsPanel";
 
 const STEPS = [
   { key: "PUBLISHED", label: "Posted" },
@@ -51,7 +52,7 @@ export default function TaskDetailPage() {
       const data = await tasksAPI.get(taskId);
       setTask(data);
       const schema = data.task_schema || {};
-      const range = schema.suggested_price_range || {};
+      const range = schema.suggestedPriceRange || {};
       const defaultPrice = data.scope?.agreed_price || range.max || range.min || "";
       setScopePrice(defaultPrice ? String(defaultPrice) : "");
     } catch (err) {
@@ -102,7 +103,7 @@ export default function TaskDetailPage() {
       await tasksAPI.proposeScope(taskId, {
         agreed_price: price,
         note: scopeNote || null,
-        scope_json: { checklist: task?.task_schema?.completion_criteria || null },
+        scope_json: { checklist: task?.task_schema?.completionCriteria || null },
       });
       await loadTask();
     } catch (err) {
@@ -152,7 +153,9 @@ export default function TaskDetailPage() {
   }
 
   const schema = task.task_schema || {};
-  const price = schema.suggested_price_range || {};
+  const price = schema.suggestedPriceRange || {};
+  const isRemote = schema.locationType === "REMOTE";
+  const timing = schema.timing || {};
   const isTasker = user?.role === "TASKER";
   const isPoster = user?.id === task.poster_id;
   const isAssignedTasker = task.tasker_id && user?.id === task.tasker_id;
@@ -202,10 +205,13 @@ export default function TaskDetailPage() {
         </div>
 
         <div className="meta-grid">
-          <div><MapPin size={16} /> {schema.location || schema.location_pin || "India"}</div>
-          <div><Timer size={16} /> {schema.estimated_duration_minutes || 60} min</div>
+          <div><MapPin size={16} /> {isRemote ? "Remote" : (schema.location || "India")}</div>
+          <div><Timer size={16} /> {schema.estimatedDurationMinutes || 60} min</div>
           {price.min != null && (
             <div><CreditCard size={16} /> ₹{price.min}–₹{price.max || price.min} suggested</div>
+          )}
+          {timing.type && timing.type !== "FLEXIBLE" && timing.date && (
+            <div>{timing.type === "BEFORE_DATE" ? "Before" : "On"} {timing.date}</div>
           )}
           {isOpen && task.offer_count > 0 && (
             <div>{task.offer_count} offer{task.offer_count === 1 ? "" : "s"}</div>
@@ -218,15 +224,18 @@ export default function TaskDetailPage() {
           )}
         </div>
 
-        {schema.completion_criteria && (
+        {schema.completionCriteria && (
           <section className="section">
             <h3>Completion criteria</h3>
-            <p>{schema.completion_criteria}</p>
+            <p>{schema.completionCriteria}</p>
           </section>
         )}
 
         {isOpen && !isStaff && (
-          <TaskOffersPanel task={task} isPoster={isPoster} onChanged={loadTask} />
+          <>
+            <TaskOffersPanel task={task} isPoster={isPoster} onChanged={loadTask} />
+            <TaskQuestionsPanel task={task} isPoster={isPoster} />
+          </>
         )}
 
         {!isOpen && !isCancelled && (isPoster || isAssignedTasker) && (
