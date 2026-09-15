@@ -86,7 +86,7 @@ class Settings(BaseSettings):
 
     # Closed beta (Phase Y)
     beta_mode_enabled: bool = True
-    beta_categories: str = "electrical,plumbing,cleaning"
+    beta_categories: str = "electrical,plumbing,cleaning,gardening,painting,handyman,tech,moving,tutoring,events"
     beta_pin_codes: str = "248001,110001,560001"
     beta_languages: str = "en,hi,ta"
     beta_city_label: str = "Dehradun · Delhi NCR · Bengaluru"

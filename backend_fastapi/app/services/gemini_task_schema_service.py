@@ -158,7 +158,8 @@ def _call_gemini_schema(text: str, *, retry_errors: list[str] | None, app_settin
             retry_note = f"\nPrevious JSON failed validation: {retry_errors}. Fix and return valid JSON only.\n"
         prompt = f"""Extract a structured gig task from the user message for an India marketplace.
 Return JSON only with keys:
-title, description, language (en or hi), category (plumbing|electrical|cleaning|tech|handyman|general),
+title, description, language (en or hi),
+category (plumbing|electrical|cleaning|gardening|painting|tech|moving|tutoring|events|handyman|general),
 urgencyLevel (normal|high), location (6-digit India PIN if mentioned, else empty string),
 locationType ("REMOTE" if the work can be done online/over a call, else "IN_PERSON"),
 timing (object: type is "ON_DATE" if a specific date is mentioned, "BEFORE_DATE" if a deadline is

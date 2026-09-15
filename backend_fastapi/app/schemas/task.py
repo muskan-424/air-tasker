@@ -19,6 +19,10 @@ class TaskFeedItem(BaseModel):
     task_schema: dict
     # Set on /api/tasks/mine: "poster", "tasker" (assigned), or "offer" (pending offer).
     my_relation: str | None = None
+    # Approximate map coordinates from the task's PIN code; absent for remote tasks or an
+    # unrecognized PIN (see app.services.pin_geocode).
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class AcceptTaskRequest(BaseModel):

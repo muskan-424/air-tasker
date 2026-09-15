@@ -7,6 +7,28 @@ from app.services.gemini_task_schema_service import build_task_schema_with_gemin
 
 _DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b")
 
+# Checked in order — first match wins, so put more specific keywords ahead of generic
+# ones (e.g. "electric" before the generic "repair"/"fix" that falls under handyman).
+CATEGORY_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("plumbing", ["plumb", "pipe", "leak", "tap", "nal", "tank", "drain", "faucet"]),
+    ("electrical", ["electric", "wiring", "fan", "bulb", "switch", "mcb", "inverter", "socket"]),
+    ("cleaning", ["clean", "jhaadu", "dust", "mop", "sofa clean", "pest control"]),
+    ("gardening", ["garden", "lawn", "plant", "mow", "landscap", "tree trim"]),
+    ("painting", ["paint", "whitewash", "wall colour", "wall color"]),
+    ("tech", ["tech", "laptop", "website", "code", "app", "software", "computer", "printer", "wifi", "router"]),
+    ("moving", ["shift", "relocat", "movers", "packers", "moving", "delivery", "courier", "pickup and drop"]),
+    ("tutoring", ["tutor", "tuition", "teach", "coaching", "homework", "exam prep"]),
+    ("events", ["event", "photograph", "photo shoot", "decorat", "catering", "wedding", "party", " dj "]),
+    ("handyman", ["repair", "assembly", "furniture", "fix", "install", "handyman", "drill", "mount", "wall"]),
+]
+
+
+def _detect_category(low: str) -> str:
+    for category, keywords in CATEGORY_KEYWORDS:
+        if any(kw in low for kw in keywords):
+            return category
+    return "general"
+
 
 def _detect_location_type(low: str) -> str:
     if any(w in low for w in ["remote", "online", "video call", "phone call", "whatsapp", "wfh"]):
@@ -45,17 +67,7 @@ def build_ai_schema_from_message(text: str) -> dict:
     t = text.strip()
     low = t.lower()
 
-    category = "general"
-    if any(x in low for x in ["plumb", "pipe", "leak", "tap", "nal", "tank"]):
-        category = "plumbing"
-    elif any(x in low for x in ["electric", "wiring", "fan", "bulb", "switch"]):
-        category = "electrical"
-    elif any(x in low for x in ["clean", "jhaadu", "dust", "mop"]):
-        category = "cleaning"
-    elif any(x in low for x in ["tech", "laptop", "website", "code", "app", "software"]):
-        category = "tech"
-    elif any(x in low for x in ["paint", "wall", "repair", "handyman"]):
-        category = "handyman"
+    category = _detect_category(low)
 
     nums = [int(x) for x in re.findall(r"\b(\d{3,5})\b", t)]
     min_p, max_p = 500, 1200

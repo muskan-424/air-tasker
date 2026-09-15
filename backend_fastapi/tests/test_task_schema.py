@@ -71,3 +71,23 @@ def test_validate_task_schema_requires_date_for_on_date_timing():
     )
     assert not ok
     assert any("timing.date" in e for e in errors)
+
+
+def test_category_taxonomy_covers_new_categories():
+    from app.services.task_chat_schema_service import _detect_category
+
+    assert _detect_category("need my garden lawn mowed") == "gardening"
+    assert _detect_category("please paint my living room wall") == "painting"
+    assert _detect_category("shift my furniture to a new flat, need movers") == "moving"
+    assert _detect_category("need a maths tutor for tuition classes") == "tutoring"
+    assert _detect_category("need a photographer for a wedding event") == "events"
+    assert _detect_category("assemble my new furniture, some drilling needed") == "handyman"
+    assert _detect_category("random gig with no matching keyword") == "general"
+
+
+def test_category_precedence_electrical_before_handyman():
+    from app.services.task_chat_schema_service import _detect_category
+
+    # "wall" alone would fall under handyman, but the more specific electrical
+    # keyword should win when both are present.
+    assert _detect_category("fix the electric switch on my wall") == "electrical"
