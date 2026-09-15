@@ -6,7 +6,7 @@ Audience: beta operators, moderators, and on-call during the limited launch.
 
 | Dimension | Closed beta value |
 |-----------|-------------------|
-| **Categories** | electrical, plumbing, cleaning |
+| **Categories** | electrical, plumbing, cleaning, gardening, painting, handyman, tech, moving, tutoring, events |
 | **PIN cluster** | 248001 (Dehradun), 110001 (Delhi NCR), 560001 (Bengaluru) |
 | **Languages** | English, Hindi, Tamil |
 
@@ -24,7 +24,7 @@ Audience: beta operators, moderators, and on-call during the limited launch.
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
 | Task not on radar | PIN outside beta cluster | Poster must include allowed PIN in draft; tasker sets service PIN in profile |
-| Publish rejected | Category not in beta list | Use electrical/plumbing/cleaning wording in draft |
+| Publish rejected | Category not in beta list | Use wording matching one of the beta categories above in the draft |
 | KYC/payout blocked | `KYC_REQUIRED_FOR_PAYOUT=true` | Complete KYC on `/kyc` or admin approves stub submission |
 | Razorpay checkout missing | Feature flag off or keys unset | Enable `FEATURE_FLAG_RAZORPAY_CHECKOUT` + Razorpay env vars |
 | AI chat unavailable | Feature flag off or Gemini key missing | Enable `FEATURE_FLAG_AI_CHAT` + `GEMINI_API_KEY` |
