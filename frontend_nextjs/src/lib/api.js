@@ -103,11 +103,14 @@ export const tasksAPI = {
   publish: (draftId) =>
     apiFetch(`/api/tasks/${draftId}/publish`, { method: "POST" }),
 
-  feed: (category = null, limit = 20, pin = null, locationType = null) => {
+  feed: ({ category, limit = 20, pin, locationType, q, minPrice, maxPrice } = {}) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (category) params.set("category", category);
     if (pin) params.set("pin", pin);
     if (locationType) params.set("location_type", locationType);
+    if (q) params.set("q", q);
+    if (minPrice != null && minPrice !== "") params.set("min_price", String(minPrice));
+    if (maxPrice != null && maxPrice !== "") params.set("max_price", String(maxPrice));
     return apiFetch(`/api/tasks/feed?${params.toString()}`);
   },
 

@@ -2,9 +2,16 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { RefreshCw, CheckCircle2, Scan, Layers, Timer, MapPin, AlertTriangle } from "lucide-react";
+import dynamic from "next/dynamic";
+import { RefreshCw, CheckCircle2, Scan, Layers, Timer, MapPin, AlertTriangle, Search, List, Map as MapIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { tasksAPI, profileAPI } from "@/lib/api";
+
+// Leaflet touches `window` at import time, so it can only load in the browser.
+const TaskMapView = dynamic(() => import("@/components/TaskMapView"), {
+  ssr: false,
+  loading: () => <div className="map-loading">Loading map…</div>,
+});
 
 const CATEGORY_COLORS = {
   Electrical: { ring: "#f59e0b", glow: "rgba(245,158,11,0.15)" },
@@ -12,6 +19,11 @@ const CATEGORY_COLORS = {
   Cleaning: { ring: "#a78bfa", glow: "rgba(167,139,250,0.15)" },
   Gardening: { ring: "#34d399", glow: "rgba(52,211,153,0.15)" },
   Painting: { ring: "#f87171", glow: "rgba(248,113,113,0.15)" },
+  Handyman: { ring: "#fb923c", glow: "rgba(251,146,60,0.15)" },
+  Tech: { ring: "#60a5fa", glow: "rgba(96,165,250,0.15)" },
+  Moving: { ring: "#eab308", glow: "rgba(234,179,8,0.15)" },
+  Tutoring: { ring: "#e879f9", glow: "rgba(232,121,249,0.15)" },
+  Events: { ring: "#fb7185", glow: "rgba(251,113,133,0.15)" },
   General: { ring: "#14b8a6", glow: "rgba(20,184,166,0.15)" },
 };
 
@@ -37,6 +49,23 @@ export default function TaskerRadar() {
   const [activePin, setActivePin] = useState("");
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [pinSuccess, setPinSuccess] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [minPriceInput, setMinPriceInput] = useState("");
+  const [maxPriceInput, setMaxPriceInput] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [viewMode, setViewMode] = useState("list"); // "list" | "map"
+
+  // Debounce free-text/number filters so we don't fire a request per keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+      setMinPrice(minPriceInput);
+      setMaxPrice(maxPriceInput);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [searchInput, minPriceInput, maxPriceInput]);
 
   // ── Fetch tasks from backend ──────────────────────────────────────────────
   const fetchTasks = useCallback(async () => {
@@ -44,7 +73,15 @@ export default function TaskerRadar() {
     setLoading(true);
     setApiError(null);
     try {
-      const data = await tasksAPI.feed(filterCategory || null, 20, activePin || null, remoteOnly ? "REMOTE" : null);
+      const data = await tasksAPI.feed({
+        category: filterCategory || null,
+        limit: 20,
+        pin: activePin || null,
+        locationType: remoteOnly ? "REMOTE" : null,
+        q: searchQuery || null,
+        minPrice: minPrice || null,
+        maxPrice: maxPrice || null,
+      });
       setTasks(data);
     } catch (err) {
       setApiError(err.message);
@@ -52,7 +89,7 @@ export default function TaskerRadar() {
     } finally {
       setLoading(false);
     }
-  }, [isLoggedIn, filterCategory, activePin, remoteOnly]);
+  }, [isLoggedIn, filterCategory, activePin, remoteOnly, searchQuery, minPrice, maxPrice]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -194,6 +231,21 @@ export default function TaskerRadar() {
             <canvas ref={canvasRef} width="280" height="280" className="radar-canvas"></canvas>
           </div>
 
+          {/* Search */}
+          <div className="filter-row">
+            <label className="filter-label">Search:</label>
+            <div className="search-input-row">
+              <Search size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="e.g. fan repair, website fix..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </div>
+
           {/* Filter */}
           <div className="filter-row">
             <label className="filter-label">Filter by Category:</label>
@@ -202,6 +254,30 @@ export default function TaskerRadar() {
               {Object.keys(CATEGORY_COLORS).map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+
+          <div className="filter-row">
+            <label className="filter-label">Budget (₹):</label>
+            <div className="price-range-row">
+              <input
+                type="number"
+                min="0"
+                placeholder="Min"
+                value={minPriceInput}
+                onChange={(e) => setMinPriceInput(e.target.value)}
+                className="price-input"
+              />
+              <span>–</span>
+              <input
+                type="number"
+                min="0"
+                placeholder="Max"
+                value={maxPriceInput}
+                onChange={(e) => setMaxPriceInput(e.target.value)}
+                className="price-input"
+              />
+            </div>
+          </div>
+
           <label className="remote-toggle">
             <input type="checkbox" checked={remoteOnly} onChange={(e) => setRemoteOnly(e.target.checked)} />
             Remote tasks only
@@ -225,6 +301,23 @@ export default function TaskerRadar() {
 
         {/* Right: Task Cards */}
         <div className="task-list-col">
+          <div className="view-toggle">
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === "list" ? "active" : ""}`}
+              onClick={() => setViewMode("list")}
+            >
+              <List size={14} /> List
+            </button>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === "map" ? "active" : ""}`}
+              onClick={() => setViewMode("map")}
+            >
+              <MapIcon size={14} /> Map
+            </button>
+          </div>
+
           {loading && (
             <div className="loading-msg">
               <RefreshCw style={{ animation: "spin 1s linear infinite" }} /> Fetching tasks from backend...
@@ -238,7 +331,8 @@ export default function TaskerRadar() {
               {!apiError && " (e.g. 248001, 110001, 560001) to see nearby jobs."}
             </div>
           )}
-          {tasks.map((task) => {
+          {!loading && tasks.length > 0 && viewMode === "map" && <TaskMapView tasks={tasks} />}
+          {!loading && viewMode === "list" && tasks.map((task) => {
             const schema = task.task_schema || {};
             const priceRange = schema.suggestedPriceRange || {};
             const isRemote = schema.locationType === "REMOTE";
@@ -326,6 +420,16 @@ export default function TaskerRadar() {
         .remote-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--color-text-muted); cursor: pointer; margin-top: 10px; }
         .filter-label { font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; }
         .category-select { background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 8px 12px; color: var(--color-text-main); font-family: inherit; font-size: 0.9rem; outline: none; width: 100%; cursor: pointer; }
+        .search-input-row { position: relative; display: flex; align-items: center; }
+        .search-icon { position: absolute; left: 10px; color: var(--color-text-muted); pointer-events: none; }
+        .search-input { width: 100%; background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 8px 12px 8px 32px; color: var(--color-text-main); font-family: inherit; font-size: 0.9rem; outline: none; }
+        .price-range-row { display: flex; align-items: center; gap: 8px; }
+        .price-range-row span { color: var(--color-text-muted); }
+        .price-input { width: 0; flex: 1; background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 8px 10px; color: var(--color-text-main); font-family: inherit; font-size: 0.9rem; outline: none; }
+        .view-toggle { display: flex; gap: 6px; align-self: flex-start; }
+        .view-toggle-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-glow); background: transparent; color: var(--color-text-muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+        .view-toggle-btn.active { color: var(--color-teal); border-color: var(--border-teal); background: rgba(20,184,166,0.08); }
+        .map-loading { display: flex; align-items: center; justify-content: center; height: 420px; border-radius: 12px; border: 1px solid var(--border-glow); color: var(--color-text-muted); font-size: 0.85rem; }
         .pin-form { display: flex; gap: 8px; }
         .pin-input { flex: 1; background: rgba(7,9,19,0.6); border: 1px solid var(--border-glow); border-radius: 8px; padding: 10px 12px; color: var(--color-text-main); font-family: monospace; font-size: 1rem; letter-spacing: 0.1em; outline: none; text-align: center; }
         .pin-btn { padding: 10px 16px; }

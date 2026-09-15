@@ -50,6 +50,7 @@ from app.services.rating_service import (
     task_is_rateable,
 )
 from app.services.task_publish_service import PublishDraftError, publish_draft_to_task
+from app.services.pin_geocode import geocode_india_pin
 from app.services.pin_utils import normalize_india_pin
 from app.services.gemini_vision_verification_service import resolve_verification
 from app.schemas.ratings import TaskRateRequest, TaskRatingResponse
@@ -142,6 +143,7 @@ async def publish_task(
 
 
 def _task_to_feed_item(task: Task, *, my_relation: str | None = None) -> TaskFeedItem:
+    coords = geocode_india_pin((task.task_schema or {}).get("location"))
     return TaskFeedItem(
         id=str(task.id),
         poster_id=str(task.poster_id),
@@ -150,6 +152,8 @@ def _task_to_feed_item(task: Task, *, my_relation: str | None = None) -> TaskFee
         subcategory=task.subcategory,
         task_schema=task.task_schema,
         my_relation=my_relation,
+        latitude=coords[0] if coords else None,
+        longitude=coords[1] if coords else None,
     )
 
 
@@ -309,10 +313,15 @@ async def tasks_feed(
     category: str | None = Query(default=None),
     pin: str | None = Query(default=None, max_length=10),
     location_type: str | None = Query(default=None, pattern="^(IN_PERSON|REMOTE)$"),
+    q: str | None = Query(default=None, max_length=200, description="Search task title/description"),
+    min_price: float | None = Query(default=None, ge=0),
+    max_price: float | None = Query(default=None, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="min_price must not exceed max_price")
     pin_norm: str | None = None
     if pin:
         try:
@@ -349,6 +358,21 @@ async def tasks_feed(
         query = query.where(Task.task_schema["location"].astext.like(f"%{pin_norm}%"))
     if location_type:
         query = query.where(Task.task_schema["locationType"].astext == location_type)
+    if q:
+        needle = f"%{q.strip()}%"
+        query = query.where(
+            or_(
+                Task.task_schema["title"].astext.ilike(needle),
+                Task.task_schema["description"].astext.ilike(needle),
+                Task.category.ilike(needle),
+                Task.subcategory.ilike(needle),
+            )
+        )
+    if min_price is not None:
+        # NULL suggested_price_max means we don't know the ceiling, so don't exclude it on a floor filter.
+        query = query.where(or_(Task.suggested_price_max.is_(None), Task.suggested_price_max >= min_price))
+    if max_price is not None:
+        query = query.where(or_(Task.suggested_price_min.is_(None), Task.suggested_price_min <= max_price))
     query = query.order_by(Task.created_at.desc()).limit(limit)
 
     result = await db.execute(query)
