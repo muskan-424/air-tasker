@@ -6,15 +6,15 @@ Complete this document for every production release. Store signed copy in your r
 
 | Field | Value |
 |-------|-------|
-| **Release version / git tag** | `6c5a03f` |
-| **Git commit** | `6c5a03f39b58ae766bc1ae7d741c3433c4fcfaee` |
-| **Alembic head** | `m5n6o7p8q9r0` |
-| **Environment** | staging (local validated 2026-07-02) |
+| **Release version / git tag** | `e36c4dd` |
+| **Git commit** | `e36c4dd02b0e1c6c7ffea7f1764fd02fd5265dbf` |
+| **Alembic head** | `p8q9r0s1t2u3` |
+| **Environment** | staging (last validated 2026-07-02; re-validate before next prod push) |
 | **Release owner** | _fill before prod_ |
 | **Rollback owner** | _fill before prod_ |
 | **On-call engineer** | _fill before prod_ |
 | **Change window (UTC)** | _fill before prod_ |
-| **Linked PRs / changelog** | PR #17 trust/reports, PR #18 ratings (Phase S), PR #19 go-live/beta tooling |
+| **Linked PRs / changelog** | PR #20 UI polish, #21 task hub, #22 Gemini voice/vision, #23 onboarding, #24 offers marketplace, #25 discovery + public Q&A + phone verification, #26 discovery search + map |
 
 ## Pre-flight checklist
 
@@ -23,7 +23,7 @@ Complete this document for every production release. Store signed copy in your r
 - [ ] `SECRET_KEY`, Razorpay, webhook secrets rotated if this is first prod launch
 - [ ] DB backup taken and restore tested within last 7 days
 - [x] `alembic upgrade head` planned; downgrade path documented if migration is risky
-- [x] Local/staging passed `python scripts/smoke_deploy.py` against `http://localhost:4000` (2026-07-02)
+- [ ] Local/staging passed `python scripts/smoke_deploy.py` against `http://localhost:4000` — last run 2026-07-02, predates PRs #20-#26 (task hub, offers marketplace, discovery/Q&A/phone verification, discovery search + map); re-run before signoff
 - [ ] Staging rollback drill completed once (see [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md))
 - [ ] Grafana dashboards live ([observability/README.md](../observability/README.md))
 - [x] Beta scope confirmed with product ([beta/SUPPORT_PLAYBOOK.md](../beta/SUPPORT_PLAYBOOK.md))
