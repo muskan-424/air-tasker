@@ -1,0 +1,8 @@
+# Shell scripts and Dockerfiles must always check out with LF, regardless of the
+# platform or a contributor's core.autocrlf setting. CRLF here silently breaks the
+# `#!/usr/bin/env bash` shebang when these run inside a Linux container — e.g. the
+# FastAPI Docker entrypoint fails with "exec ...: no such file or directory" when
+# built from a Windows checkout that has core.autocrlf=true (a common default).
+*.sh text eol=lf
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf
