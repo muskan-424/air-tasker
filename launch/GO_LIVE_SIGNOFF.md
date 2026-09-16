@@ -6,15 +6,15 @@ Complete this document for every production release. Store signed copy in your r
 
 | Field | Value |
 |-------|-------|
-| **Release version / git tag** | `e36c4dd` |
-| **Git commit** | `e36c4dd02b0e1c6c7ffea7f1764fd02fd5265dbf` |
+| **Release version / git tag** | `a2da0a6` |
+| **Git commit** | `a2da0a6e89c5ba630e95dfccdbd166addd2bca1e` |
 | **Alembic head** | `p8q9r0s1t2u3` |
-| **Environment** | staging (last validated 2026-07-02; re-validate before next prod push) |
+| **Environment** | local Docker validated 2026-09-16; not yet deployed to a real staging/prod host |
 | **Release owner** | _fill before prod_ |
 | **Rollback owner** | _fill before prod_ |
 | **On-call engineer** | _fill before prod_ |
 | **Change window (UTC)** | _fill before prod_ |
-| **Linked PRs / changelog** | PR #20 UI polish, #21 task hub, #22 Gemini voice/vision, #23 onboarding, #24 offers marketplace, #25 discovery + public Q&A + phone verification, #26 discovery search + map |
+| **Linked PRs / changelog** | PR #20 UI polish, #21 task hub, #22 Gemini voice/vision, #23 onboarding, #24 offers marketplace, #25 discovery + public Q&A + phone verification, #26 discovery search + map, #27 docs refresh, #28 AWS deploy runbook, #29 Docker entrypoint CRLF fix |
 
 ## Pre-flight checklist
 
@@ -23,9 +23,9 @@ Complete this document for every production release. Store signed copy in your r
 - [ ] `SECRET_KEY`, Razorpay, webhook secrets rotated if this is first prod launch
 - [ ] DB backup taken and restore tested within last 7 days
 - [x] `alembic upgrade head` planned; downgrade path documented if migration is risky
-- [ ] Local/staging passed `python scripts/smoke_deploy.py` against `http://localhost:4000` — last run 2026-07-02, predates PRs #20-#26 (task hub, offers marketplace, discovery/Q&A/phone verification, discovery search + map); re-run before signoff
-- [ ] Staging rollback drill completed once (see [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md))
-- [ ] Grafana dashboards live ([observability/README.md](../observability/README.md))
+- [x] Local passed `python scripts/smoke_deploy.py` against `http://localhost:4000` (2026-09-16, commit `a2da0a6`, all 12 checks incl. 10-category beta config) — **local only; still needs a pass against a real staging/prod URL once deployed**
+- [ ] Staging rollback drill completed once (see [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md)) — blocked on a deployed staging host
+- [ ] Grafana dashboards live ([observability/README.md](../observability/README.md)) — blocked on a deployed host
 - [x] Beta scope confirmed with product ([beta/SUPPORT_PLAYBOOK.md](../beta/SUPPORT_PLAYBOOK.md))
 
 ## Deploy execution
