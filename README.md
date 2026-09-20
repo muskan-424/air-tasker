@@ -178,6 +178,29 @@ Restore from a backup file:
 docker compose exec -T db psql -U postgres -d airtasker < backup_20260331_120000.sql
 ```
 
+> **Windows / PowerShell:** do not use `>` or `<` redirection for the commands above. PowerShell 5.1
+> re-encodes redirected output as UTF-16, which silently corrupts the SQL dump. Use the
+> container-side, custom-format procedure below instead — it works the same in bash and PowerShell.
+
+Recommended (custom format, verified in a local restore drill on 2026-09-20):
+
+```bash
+# 1. Backup: dump inside the container, then copy the file out
+docker compose exec -T db pg_dump -U postgres -d airtasker -Fc -f /tmp/airtasker_backup.dump
+docker compose cp db:/tmp/airtasker_backup.dump ./airtasker_backup.dump
+
+# 2. Restore-test into a scratch database (never touches the live one)
+docker compose exec -T db psql -U postgres -d postgres -c "CREATE DATABASE airtasker_restore;"
+docker compose exec -T db pg_restore -U postgres -d airtasker_restore --no-owner /tmp/airtasker_backup.dump
+
+# 3. Compare per-table row counts and `select version_num from alembic_version` between
+#    airtasker and airtasker_restore, then clean up:
+docker compose exec -T db psql -U postgres -d postgres -c "DROP DATABASE airtasker_restore;"
+```
+
+To recover for real, restore into the (empty) production database instead of the scratch one, with
+the API stopped, then start the API and run `python scripts/smoke_deploy.py`.
+
 For production/staging, keep backups outside the host machine and rotate old dumps.
 
 ### Migration recovery runbook
