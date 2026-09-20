@@ -19,7 +19,7 @@ Complete this document for every production release. Store signed copy in your r
 ## Pre-flight checklist
 
 - [x] All PRs merged to `main`; CI green (backend, integration, frontend, E2E, smoke-staging)
-- [ ] `.env.production.example` reviewed; secrets set in host (not in git)
+- [ ] `.env.production.example` reviewed; secrets set in host (not in git) — template reviewed 2026-09-20 and the API now refuses to start in production with a placeholder/short `SECRET_KEY` or `CORS_ALLOWED_ORIGINS=*` (verified in the prod overlay); **secrets still to be set on the real host**. Known launch decisions: `/metrics` is unauthenticated (block it at the tunnel or disable it), and KYC uses the stub provider (`KYC_STUB_AUTO_VERIFY=false` ⇒ admin approval)
 - [ ] `SECRET_KEY`, Razorpay, webhook secrets rotated if this is first prod launch
 - [ ] DB backup taken and restore tested within last 7 days
 - [x] `alembic upgrade head` planned; downgrade path documented if migration is risky

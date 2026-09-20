@@ -144,13 +144,19 @@ Production hardening in this overlay:
 
 Minimum required shell env vars before running the command:
 - `DATABASE_URL`
-- `SECRET_KEY`
+- `SECRET_KEY` — 32+ random characters (`openssl rand -hex 32`)
+- `CORS_ALLOWED_ORIGINS` — your frontend origin(s), never `*`
+
+With `ENVIRONMENT=production` (set by this overlay) the API **refuses to start** if `SECRET_KEY` is a
+placeholder/too short or `CORS_ALLOWED_ORIGINS` is `*`, and logs warnings for other risky settings
+(default DB credentials, mock chatbot, stub KYC auto-verify, missing Razorpay keys/webhook secret).
 
 Example (PowerShell):
 
 ```powershell
-$env:DATABASE_URL="postgresql+asyncpg://postgres:postgres@db:5432/airtasker"
-$env:SECRET_KEY="replace-with-long-random-secret"
+$env:DATABASE_URL="postgresql+asyncpg://airtasker:YOUR_STRONG_DB_PASSWORD@db:5432/airtasker"
+$env:SECRET_KEY=(python -c "import secrets; print(secrets.token_hex(32))")
+$env:CORS_ALLOWED_ORIGINS="https://app.yourdomain.com"
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
