@@ -23,10 +23,10 @@ class Settings(BaseSettings):
     # Agentic chatbot + RAG config
     use_mock_chatbot: bool = True
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3.8-flash"
     # Latency vs quality: short/simple paths use fast model; long or complex use quality model.
-    gemini_model_fast: str = "gemini-2.0-flash"
-    gemini_model_quality: str = "gemini-2.0-flash"
+    gemini_model_fast: str = "gemini-3.8-flash"
+    gemini_model_quality: str = "gemini-3.8-flash"
     gemini_quality_min_total_chars: int = 1200  # user message + FACTS length threshold
     gemini_embedding_model: str = "models/text-embedding-004"
     agent_confidence_threshold: float = 0.45
