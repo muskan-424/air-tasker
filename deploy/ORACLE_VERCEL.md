@@ -56,7 +56,9 @@ Set in `.env.deploy`:
 - `SECRET_KEY` — from above
 - `POSTGRES_PASSWORD` — strong password
 - `DATABASE_URL` — same password in URL: `postgresql+asyncpg://postgres:YOUR_PASS@db:5432/airtasker`
-- `CORS_ALLOWED_ORIGINS` — fill after Vercel (Phase 3), e.g. `https://air-tasker-xxx.vercel.app`
+- `CORS_ALLOWED_ORIGINS` — your Vercel URL, e.g. `https://air-tasker-xxx.vercel.app`.
+  Set it **before the first start**: the stack refuses to start if it is empty. If the Vercel
+  project doesn't exist yet, leave the template placeholder and correct it in Phase 3.
 
 ### 1.4 Start stack
 
@@ -113,6 +115,8 @@ npm run beta:check -- --base-url https://YOUR-TUNNEL-HOST
 Copy Vercel URL: `https://your-app.vercel.app`
 
 ### Update CORS on VM
+
+Only needed if `CORS_ALLOWED_ORIGINS` doesn't already match the Vercel URL above.
 
 ```bash
 nano .env.deploy

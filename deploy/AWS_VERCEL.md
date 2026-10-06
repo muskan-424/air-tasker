@@ -62,7 +62,10 @@ Set in `.env.deploy`:
 - `SECRET_KEY` — from above
 - `POSTGRES_PASSWORD` — strong password
 - `DATABASE_URL` — same password in URL: `postgresql+asyncpg://postgres:YOUR_PASS@db:5432/airtasker`
-- `CORS_ALLOWED_ORIGINS` — fill after Vercel (Phase 3), e.g. `https://air-tasker-xxx.vercel.app`
+- `CORS_ALLOWED_ORIGINS` — your Vercel production URL, e.g. `https://air-tasker-xxx.vercel.app`.
+  Set it **before the first start**: the stack refuses to start if it is empty or contains `*`.
+  If the Vercel project doesn't exist yet, leave the template placeholder and correct it in
+  Phase 3.
 - Razorpay/Gemini/SMTP keys — see [.env.production.example](../.env.production.example) for
   the full list; rotate every secret rather than reusing staging values for the first real
   prod launch (see the [go-live checklist](../launch/GO_LIVE_SIGNOFF.md))
@@ -131,6 +134,8 @@ npm run beta:check -- --base-url https://YOUR-TUNNEL-HOST
 Copy Vercel URL: `https://your-app.vercel.app`
 
 ### Update CORS on EC2
+
+Only needed if `CORS_ALLOWED_ORIGINS` doesn't already match the Vercel URL above.
 
 ```bash
 nano .env.deploy
