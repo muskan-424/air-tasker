@@ -1,4 +1,11 @@
+import logging
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+# Substrings that mark a SECRET_KEY as one of the placeholder values shipped in this repo's env templates.
+_PLACEHOLDER_SECRET_MARKERS = ("change-this", "change-me", "replace-with", "do-not-use")
 
 
 class Settings(BaseSettings):
@@ -135,6 +142,55 @@ class Settings(BaseSettings):
         if raw == "*":
             return ["*"]
         return [part.strip() for part in raw.split(",") if part.strip()]
+
+    def production_config_problems(self) -> tuple[list[str], list[str]]:
+        """Return (errors, warnings) for settings that are unsafe when ENVIRONMENT=production.
+
+        Errors make the app refuse to start (see enforce_production_config); warnings are only logged.
+        Returns two empty lists outside production so dev, test, and staging are unaffected.
+        """
+        if self.environment.strip().lower() != "production":
+            return [], []
+
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        key = self.secret_key.strip()
+        lowered = key.lower()
+        if len(key) < 32 or any(marker in lowered for marker in _PLACEHOLDER_SECRET_MARKERS):
+            errors.append(
+                "SECRET_KEY is missing, shorter than 32 characters, or still a placeholder — "
+                "anyone who knows the placeholder can forge login tokens. Generate one with `openssl rand -hex 32`."
+            )
+        if "*" in self.cors_origins():
+            errors.append(
+                'CORS_ALLOWED_ORIGINS is "*" — set it to your frontend origin(s), e.g. https://app.example.com.'
+            )
+
+        if "postgres:postgres@" in self.database_url:
+            warnings.append("DATABASE_URL uses the default postgres:postgres credentials.")
+        if self.use_mock_chatbot:
+            warnings.append("USE_MOCK_CHATBOT=true — the chatbot serves canned answers, not Gemini.")
+        if self.kyc_provider.strip().lower() == "stub" and self.kyc_stub_auto_verify:
+            warnings.append(
+                "KYC_STUB_AUTO_VERIFY=true with the stub provider auto-verifies every user, so the payout KYC gate "
+                "does nothing. Set KYC_STUB_AUTO_VERIFY=false to require admin approval, or wire a real provider."
+            )
+        if self.feature_flag_razorpay_checkout and not (self.razorpay_key_id and self.razorpay_key_secret):
+            warnings.append("Razorpay checkout is enabled but RAZORPAY_KEY_ID/RAZORPAY_KEY_SECRET are not set.")
+        if not self.razorpay_webhook_secret:
+            warnings.append("RAZORPAY_WEBHOOK_SECRET is not set — Razorpay webhooks will be rejected (503).")
+        return errors, warnings
+
+    def enforce_production_config(self) -> None:
+        """Log warnings and raise RuntimeError on errors; a no-op outside production."""
+        errors, warnings = self.production_config_problems()
+        for message in warnings:
+            logger.warning("Production config: %s", message)
+        if errors:
+            raise RuntimeError(
+                "Refusing to start with an unsafe production configuration:\n  - " + "\n  - ".join(errors)
+            )
 
 
 settings = Settings()

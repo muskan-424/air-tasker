@@ -39,6 +39,9 @@ from app.workers.job_queue import enqueue, reset_queue, start_worker
 
 logger = logging.getLogger(__name__)
 
+# Fail fast (only when ENVIRONMENT=production) rather than serve traffic with a placeholder SECRET_KEY or wildcard CORS.
+settings.enforce_production_config()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
