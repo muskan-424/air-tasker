@@ -79,9 +79,10 @@ export default function OnboardingPage() {
 
           {data.beta_pin_codes?.length > 0 && (
             <div className="beta-hint glass-card">
-              <strong>Closed beta areas</strong>
-              <span>PINs: {data.beta_pin_codes.join(", ")}</span>
-              <span>Categories: {data.beta_categories?.join(", ")}</span>
+              <span>
+                <strong>Available now</strong> in PIN codes {data.beta_pin_codes.join(", ")}
+                {data.beta_categories?.length > 0 && <> for {data.beta_categories.join(", ")}</>}.
+              </span>
             </div>
           )}
 
@@ -140,8 +141,8 @@ export default function OnboardingPage() {
         .progress-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, var(--color-teal), #14b8a6); border-radius: 999px; transition: width 0.4s ease; }
         .complete-msg { color: #10b981; font-size: 0.88rem; font-weight: 600; }
-        .beta-hint { padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--color-text-muted); }
-        .beta-hint strong { color: var(--color-saffron); font-size: 0.78rem; text-transform: uppercase; }
+        .beta-hint { padding: 10px 16px; font-size: 0.8rem; line-height: 1.45; color: var(--color-text-muted); }
+        .beta-hint strong { color: var(--color-text-main); font-weight: 600; }
         .steps-list { list-style: none; display: flex; flex-direction: column; gap: 12px; padding: 0; margin: 0; }
         .step-card { display: flex; gap: 14px; padding: 18px; }
         .step-card.done { border-color: rgba(16,185,129,0.25); }
