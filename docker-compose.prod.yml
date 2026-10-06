@@ -1,7 +1,8 @@
 services:
   db:
     # Do not publish Postgres port publicly in production by default.
-    ports: []
+    # (!reset is required: a plain [] is merged with the base list and removes nothing.)
+    ports: !reset []
     mem_limit: "512m"
     cpus: "0.50"
     restart: unless-stopped
