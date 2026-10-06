@@ -21,11 +21,11 @@ Complete this document for every production release. Store signed copy in your r
 - [x] All PRs merged to `main`; CI green (backend, integration, frontend, E2E, smoke-staging)
 - [ ] `.env.production.example` reviewed; secrets set in host (not in git) — template reviewed 2026-09-20 and the API now refuses to start in production with a placeholder/short `SECRET_KEY` or `CORS_ALLOWED_ORIGINS=*` (verified in the prod overlay); **secrets still to be set on the real host**. Known launch decisions: `/metrics` is unauthenticated (block it at the tunnel or disable it), and KYC uses the stub provider (`KYC_STUB_AUTO_VERIFY=false` ⇒ admin approval)
 - [ ] `SECRET_KEY`, Razorpay, webhook secrets rotated if this is first prod launch
-- [ ] DB backup taken and restore tested within last 7 days
-- [x] `alembic upgrade head` planned; downgrade path documented if migration is risky
+- [ ] DB backup taken and restore tested within last 7 days — procedure rehearsed locally 2026-09-20 (pg_dump -Fc → pg_restore into scratch DB: 30/30 tables matched row-for-row, same alembic revision; see README "Backup and restore"); **repeat against the real prod DB before signoff**
+- [x] `alembic upgrade head` planned; downgrade path documented if migration is risky — verified 2026-09-20: `alembic downgrade -1` then `upgrade head` on the latest migration (`p8q9r0s1t2u3`) succeeds, `alembic check` reports no drift, smoke passes afterwards
 - [x] Local passed `python scripts/smoke_deploy.py` against `http://localhost:4000` (2026-09-16, commit `a2da0a6`, all 12 checks incl. 10-category beta config) — **local only; still needs a pass against a real staging/prod URL once deployed**
-- [ ] Staging rollback drill completed once (see [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md)) — blocked on a deployed staging host
-- [ ] Grafana dashboards live ([observability/README.md](../observability/README.md)) — blocked on a deployed host
+- [ ] Staging rollback drill completed once (see [ROLLBACK_DRILL.md](./ROLLBACK_DRILL.md)) — rehearsed locally 2026-09-20 (bad `DATABASE_URL` deploy: API never healthy, smoke exit 1; rolled back to the last-good config: healthy in ~15s, same image, alembic unchanged, no data lost, smoke passes); **still to be done once on a real staging host**
+- [ ] Grafana dashboards live ([observability/README.md](../observability/README.md)) — verified locally 2026-09-20 (Prometheus target `up`, `vayutask_*` metrics flowing, Grafana datasource + Ops Overview dashboard auto-provisioned); **blocked on a deployed host for the live check**
 - [x] Beta scope confirmed with product ([beta/SUPPORT_PLAYBOOK.md](../beta/SUPPORT_PLAYBOOK.md))
 
 ## Deploy execution
