@@ -41,9 +41,12 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./backend_fastapi/.env.docker.example
+      # Optional, gitignored: real secrets (SMTP, Razorpay, Gemini) override the example values.
+      - path: ./backend_fastapi/.env.docker
+        required: false
     ports:
       - "4000:4000"
-    # For optional Redis, set REDIS_URL in backend_fastapi/.env.docker.example
+    # For optional Redis, set REDIS_URL in backend_fastapi/.env.docker
     environment: {}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:4000/api/health', timeout=3).getcode()==200 else 1)"]
