@@ -69,7 +69,10 @@ function PaymentsInner() {
       const data = await tasksAPI.startEscrow(taskId.trim());
       setEscrowData(data);
       addLedger("Escrow Locked", `Escrow ID: ${data.escrow_payment_id} · Amount: ₹${data.amount} ${data.currency} · Status: ${data.status}`, "success");
-      setCurrentStep(1);
+      // Resume from the server's escrow status so a refreshed page doesn't reopen checkout for an already-paid order.
+      if (data.status === "RELEASED") setCurrentStep(4);
+      else if (data.status === "RELEASE_ELIGIBLE") setCurrentStep(3);
+      else setCurrentStep(1);
     } catch (err) {
       setApiError(err.message);
       addLedger("Escrow Lock Failed", err.message, "error");
