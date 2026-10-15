@@ -50,11 +50,10 @@ test.describe("Marketplace happy path", () => {
       timeout: 30_000,
     });
 
-    // Poster releases escrow
+    // Poster releases escrow — escrow is already release-eligible, so the page
+    // resumes from the server status and skips straight to the Release step.
     await page.goto(`/payments?task_id=${taskId}`);
     await page.getByRole("button", { name: /Lock escrow/i }).click();
-    await page.getByRole("button", { name: /Pay with Razorpay/i }).click();
-    await page.getByRole("button", { name: /Mark in progress/i }).click();
     await page.getByRole("button", { name: /Release funds/i }).click();
     await expect(page.getByText(/Escrow Released/i)).toBeVisible({ timeout: 15_000 });
   });
